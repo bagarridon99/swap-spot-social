@@ -34,6 +34,8 @@ export interface Product {
   user: UserProfile;
   saved?: boolean;
   views?: number;
+  boosted?: boolean;
+  premium?: boolean;
 }
 
 export const chileanRegions = [
