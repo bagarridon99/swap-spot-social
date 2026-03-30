@@ -5,71 +5,198 @@ import productBike from "@/assets/product-bike.jpg";
 import productGuitar from "@/assets/product-guitar.jpg";
 import productBooks from "@/assets/product-books.jpg";
 
-export const mockProducts = [
+export interface UserProfile {
+  id: string;
+  name: string;
+  initials: string;
+  location: string;
+  rating: number;
+  totalReviews: number;
+  totalSwaps: number;
+  memberSince: string;
+  bio: string;
+  verified: boolean;
+  responseRate: number;
+  responseTime: string;
+}
+
+export interface Product {
+  id: number;
+  image: string;
+  title: string;
+  description: string;
+  wantsInReturn: string;
+  acceptableItems: string[];
+  condition: string;
+  category: string;
+  timeAgo: string;
+  user: UserProfile;
+}
+
+export const mockUsers: UserProfile[] = [
+  {
+    id: "u1",
+    name: "María López",
+    initials: "ML",
+    location: "Madrid",
+    rating: 4.8,
+    totalReviews: 32,
+    totalSwaps: 28,
+    memberSince: "Marzo 2024",
+    bio: "Amante de la moda vintage y los viajes. Siempre buscando piezas únicas.",
+    verified: true,
+    responseRate: 95,
+    responseTime: "~1 hora",
+  },
+  {
+    id: "u2",
+    name: "Carlos Ruiz",
+    initials: "CR",
+    location: "Barcelona",
+    rating: 4.5,
+    totalReviews: 18,
+    totalSwaps: 15,
+    memberSince: "Junio 2024",
+    bio: "Fotógrafo aficionado. Colecciono cámaras analógicas y equipos vintage.",
+    verified: true,
+    responseRate: 88,
+    responseTime: "~3 horas",
+  },
+  {
+    id: "u3",
+    name: "Ana Torres",
+    initials: "AT",
+    location: "Valencia",
+    rating: 5.0,
+    totalReviews: 12,
+    totalSwaps: 10,
+    memberSince: "Enero 2025",
+    bio: "Deportista y fashionista. Me encanta renovar mi armario sin gastar.",
+    verified: false,
+    responseRate: 100,
+    responseTime: "~30 min",
+  },
+  {
+    id: "u4",
+    name: "Pedro Sánchez",
+    initials: "PS",
+    location: "Sevilla",
+    rating: 4.2,
+    totalReviews: 8,
+    totalSwaps: 6,
+    memberSince: "Septiembre 2024",
+    bio: "Aventurero de fin de semana. Intercambio equipos de deporte.",
+    verified: true,
+    responseRate: 78,
+    responseTime: "~6 horas",
+  },
+  {
+    id: "u5",
+    name: "Laura García",
+    initials: "LG",
+    location: "Bilbao",
+    rating: 4.9,
+    totalReviews: 45,
+    totalSwaps: 40,
+    memberSince: "Noviembre 2023",
+    bio: "Música es mi vida. Intercambio instrumentos y vinilos.",
+    verified: true,
+    responseRate: 97,
+    responseTime: "~45 min",
+  },
+  {
+    id: "u6",
+    name: "Diego Martín",
+    initials: "DM",
+    location: "Málaga",
+    rating: 4.6,
+    totalReviews: 22,
+    totalSwaps: 19,
+    memberSince: "Abril 2024",
+    bio: "Lector voraz y coleccionista de cómics. Siempre buscando nuevas historias.",
+    verified: true,
+    responseRate: 92,
+    responseTime: "~2 horas",
+  },
+];
+
+export const mockProducts: Product[] = [
   {
     id: 1,
     image: productBag,
     title: "Bolso de cuero vintage",
+    description:
+      "Bolso de cuero genuino estilo messenger, marca artesanal italiana. Tiene compartimentos interiores para portátil de hasta 13 pulgadas. Color marrón coñac. Apenas usado, sin rasguños visibles.",
     wantsInReturn: "Mochila de senderismo",
-    userName: "María López",
-    userInitials: "ML",
-    location: "Madrid",
-    timeAgo: "Hace 2 horas",
+    acceptableItems: ["Mochila de senderismo", "Bolso de viaje", "Maleta de cabina", "Riñonera de cuero"],
     condition: "Como nuevo",
+    category: "Ropa",
+    timeAgo: "Hace 2 horas",
+    user: mockUsers[0],
   },
   {
     id: 2,
     image: productCamera,
     title: "Cámara analógica Fuji",
+    description:
+      "Cámara analógica Fuji de 35mm en perfecto estado de funcionamiento. Incluye funda original y correa. Ideal para iniciarse en la fotografía analógica o como pieza de colección.",
     wantsInReturn: "Lente 50mm o trípode",
-    userName: "Carlos Ruiz",
-    userInitials: "CR",
-    location: "Barcelona",
-    timeAgo: "Hace 5 horas",
+    acceptableItems: ["Lente 50mm", "Trípode profesional", "Flash externo", "Otra cámara analógica"],
     condition: "Buen estado",
+    category: "Fotografía",
+    timeAgo: "Hace 5 horas",
+    user: mockUsers[1],
   },
   {
     id: 3,
     image: productSneakers,
     title: "Zapatillas blancas talla 42",
+    description:
+      "Zapatillas blancas minimalistas, talla 42 EU. Sin estrenar, vienen con caja original. Estilo clásico que combina con todo.",
     wantsInReturn: "Zapatillas de running",
-    userName: "Ana Torres",
-    userInitials: "AT",
-    location: "Valencia",
-    timeAgo: "Hace 1 día",
+    acceptableItems: ["Zapatillas de running", "Botas de montaña", "Sandalias de marca", "Zapatos formales"],
     condition: "Nuevo",
+    category: "Ropa",
+    timeAgo: "Hace 1 día",
+    user: mockUsers[2],
   },
   {
     id: 4,
     image: productBike,
-    title: "Bicicleta de montaña 29\"",
+    title: 'Bicicleta de montaña 29"',
+    description:
+      "Mountain bike con ruedas de 29 pulgadas, cuadro de aluminio, frenos de disco hidráulicos y cambios Shimano de 21 velocidades. Perfecta para rutas de trail y senderos.",
     wantsInReturn: "Patinete eléctrico o kayak",
-    userName: "Pedro Sánchez",
-    userInitials: "PS",
-    location: "Sevilla",
-    timeAgo: "Hace 3 horas",
+    acceptableItems: ["Patinete eléctrico", "Kayak", "Tabla de surf", "Equipo de esquí"],
     condition: "Buen estado",
+    category: "Deportes",
+    timeAgo: "Hace 3 horas",
+    user: mockUsers[3],
   },
   {
     id: 5,
     image: productGuitar,
     title: "Guitarra acústica Yamaha",
+    description:
+      "Guitarra acústica Yamaha F310, tapa de abeto, aros y fondo de meranti. Sonido cálido y equilibrado. Incluye funda acolchada y juego de cuerdas extra.",
     wantsInReturn: "Teclado o ukelele",
-    userName: "Laura García",
-    userInitials: "LG",
-    location: "Bilbao",
-    timeAgo: "Hace 8 horas",
+    acceptableItems: ["Teclado electrónico", "Ukelele", "Armónica profesional", "Cajón flamenco"],
     condition: "Como nuevo",
+    category: "Música",
+    timeAgo: "Hace 8 horas",
+    user: mockUsers[4],
   },
   {
     id: 6,
     image: productBooks,
     title: "Colección novelas clásicas",
+    description:
+      "Colección de 8 novelas clásicas en tapa dura: Don Quijote, Cien años de soledad, 1984, El principito, y más. Ediciones de calidad con buena encuadernación.",
     wantsInReturn: "Comics o manga",
-    userName: "Diego Martín",
-    userInitials: "DM",
-    location: "Málaga",
-    timeAgo: "Hace 1 día",
+    acceptableItems: ["Colección de manga", "Comics Marvel/DC", "Novela gráfica", "Libros de arte"],
     condition: "Buen estado",
+    category: "Libros",
+    timeAgo: "Hace 1 día",
+    user: mockUsers[5],
   },
 ];

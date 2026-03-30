@@ -1,29 +1,20 @@
 import { MapPin, ArrowLeftRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { Product } from "@/data/mockProducts";
 
 interface ProductCardProps {
-  image: string;
-  title: string;
-  wantsInReturn: string;
-  userName: string;
-  userInitials: string;
-  location: string;
-  timeAgo: string;
-  condition: string;
+  product: Product;
+  onClick?: () => void;
 }
 
-const ProductCard = ({
-  image,
-  title,
-  wantsInReturn,
-  userName,
-  userInitials,
-  location,
-  timeAgo,
-  condition,
-}: ProductCardProps) => {
+const ProductCard = ({ product, onClick }: ProductCardProps) => {
+  const { image, title, wantsInReturn, condition, user, timeAgo } = product;
+
   return (
-    <div className="group bg-card rounded-xl overflow-hidden border card-hover cursor-pointer">
+    <div
+      className="group bg-card rounded-xl overflow-hidden border card-hover cursor-pointer"
+      onClick={onClick}
+    >
       <div className="relative aspect-square overflow-hidden">
         <img
           src={image}
@@ -54,14 +45,14 @@ const ProductCard = ({
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarFallback className="bg-secondary text-secondary-foreground text-[10px] font-semibold">
-                {userInitials}
+                {user.initials}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground">{userName}</span>
+            <span className="text-xs text-muted-foreground">{user.name}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin className="h-3 w-3" />
-            {location}
+            {user.location}
           </div>
         </div>
 
