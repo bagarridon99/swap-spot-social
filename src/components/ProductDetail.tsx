@@ -13,6 +13,8 @@ import {
   Zap,
   Eye,
   Flag,
+  TrendingUp,
+  Crown,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ interface ProductDetailProps {
   onClose: () => void;
   onViewProfile: (userId: string) => void;
   onPropose: () => void;
+  onBoost: () => void;
   saved?: boolean;
   onToggleSave?: () => void;
 }
@@ -46,7 +49,7 @@ const StarRating = ({ rating }: { rating: number }) => (
   </div>
 );
 
-const ProductDetail = ({ product, onClose, onViewProfile, onPropose, saved, onToggleSave }: ProductDetailProps) => {
+const ProductDetail = ({ product, onClose, onViewProfile, onPropose, onBoost, saved, onToggleSave }: ProductDetailProps) => {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={onClose} />
@@ -65,13 +68,26 @@ const ProductDetail = ({ product, onClose, onViewProfile, onPropose, saved, onTo
             <div className="relative aspect-square sm:aspect-auto sm:h-full">
               <img src={product.image} alt={product.title} className="h-full w-full object-cover" />
               <div className="absolute top-4 left-4 flex gap-2">
-                <span className="swap-badge">
-                  <ArrowLeftRight className="h-3 w-3" />
-                  Trueque
-                </span>
+                {product.boosted ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
+                    <Zap className="h-3 w-3" />
+                    Destacado
+                  </span>
+                ) : (
+                  <span className="swap-badge">
+                    <ArrowLeftRight className="h-3 w-3" />
+                    Trueque
+                  </span>
+                )}
                 <span className="bg-card/90 backdrop-blur-sm text-foreground text-xs px-2.5 py-1 rounded-full font-medium">
                   {product.condition}
                 </span>
+                {product.premium && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-500/90 text-white">
+                    <Crown className="h-3 w-3" />
+                    Premium
+                  </span>
+                )}
               </div>
             </div>
 
@@ -114,11 +130,18 @@ const ProductDetail = ({ product, onClose, onViewProfile, onPropose, saved, onTo
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-11 w-11 ring-2 ring-primary/20">
-                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                        {product.user.initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-11 w-11 ring-2 ring-primary/20">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                          {product.user.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      {product.premium && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 border-2 border-card flex items-center justify-center">
+                          <Crown className="h-2 w-2 text-white" />
+                        </span>
+                      )}
+                    </div>
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-foreground text-sm">{product.user.name}</span>
@@ -189,6 +212,19 @@ const ProductDetail = ({ product, onClose, onViewProfile, onPropose, saved, onTo
                 <Button variant="outline" size="icon" className="rounded-full shrink-0" onClick={() => toast.success("Link copiado al portapapeles")}>
                   <Share2 className="h-4 w-4" />
                 </Button>
+              </div>
+
+              {/* Boost CTA */}
+              <div
+                onClick={onBoost}
+                className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-primary/10 border border-amber-500/20 cursor-pointer hover:border-amber-500/40 transition-colors"
+              >
+                <TrendingUp className="h-5 w-5 text-amber-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">¿Es tu publicación? Destácala</p>
+                  <p className="text-xs text-muted-foreground">Obtén hasta 8x más visitas desde $990</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
 
               {/* Report */}

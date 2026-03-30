@@ -12,18 +12,22 @@ import Footer from "@/components/Footer";
 import SavedItems from "@/components/SavedItems";
 import TruequeProposal from "@/components/TruequeProposal";
 import RegionFilter from "@/components/RegionFilter";
+import PricingModal from "@/components/PricingModal";
+import BoostModal from "@/components/BoostModal";
+import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { mockProducts, mockUsers } from "@/data/mockProducts";
 import type { Product, UserProfile } from "@/data/mockProducts";
-import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin } from "lucide-react";
+import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Panel = "notifications" | "chat" | "publish" | "saved" | null;
+type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | null;
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>(null);
   const [proposalProduct, setProposalProduct] = useState<Product | null>(null);
+  const [boostProduct, setBoostProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState("Todo");
   const [regionFilter, setRegionFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,6 +53,15 @@ const Index = () => {
     });
   }, [activeCategory, regionFilter, searchQuery, mobileSearch]);
 
+  // Sort: boosted first
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      if (a.boosted && !b.boosted) return -1;
+      if (!a.boosted && b.boosted) return 1;
+      return 0;
+    });
+  }, [filteredProducts]);
+
   const savedProducts = mockProducts.filter((p) => savedIds.has(p.id));
 
   const handleViewProfile = (userId: string) => {
@@ -64,6 +77,47 @@ const Index = () => {
     setProposalProduct(product);
   };
 
+  const handleBoost = (product: Product) => {
+    setSelectedProduct(null);
+    setBoostProduct(product);
+  };
+
+  // Insert sponsored ads after every 3rd product
+  const renderFeedItems = () => {
+    const items: JSX.Element[] = [];
+    let adIndex = 0;
+
+    sortedProducts.forEach((product, i) => {
+      items.push(
+        <div
+          key={`product-${product.id}`}
+          className="animate-fade-in"
+          style={{ animationDelay: `${i * 80}ms` }}
+        >
+          <ProductCard
+            product={product}
+            onClick={() => setSelectedProduct(product)}
+            saved={savedIds.has(product.id)}
+            onToggleSave={() => toggleSaved(product.id)}
+          />
+        </div>
+      );
+
+      // Insert ad after every 3rd product
+      if ((i + 1) % 3 === 0 && adIndex < sponsoredAds.length) {
+        const ad = sponsoredAds[adIndex];
+        items.push(
+          <div key={`ad-${ad.id}`} className="animate-fade-in" style={{ animationDelay: `${(i + 1) * 80}ms` }}>
+            <SponsoredCard ad={ad} />
+          </div>
+        );
+        adIndex++;
+      }
+    });
+
+    return items;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <MarketplaceHeader
@@ -71,6 +125,7 @@ const Index = () => {
         onNotifications={() => setActivePanel("notifications")}
         onChat={() => setActivePanel("chat")}
         onSaved={() => setActivePanel("saved")}
+        onPricing={() => setActivePanel("pricing")}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -121,6 +176,18 @@ const Index = () => {
               <span><strong className="text-foreground">100%</strong> gratis</span>
             </div>
           </div>
+
+          {/* Premium CTA banner */}
+          <div
+            className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/20 cursor-pointer hover:border-amber-500/40 transition-colors"
+            onClick={() => setActivePanel("pricing")}
+          >
+            <Crown className="h-4 w-4 text-amber-500" />
+            <span className="text-sm text-foreground">
+              <strong>TruequeYa Premium</strong> — Destaca tus publicaciones y consigue más trueques
+            </span>
+            <span className="text-xs text-amber-600 font-medium">Desde $4.990/mes →</span>
+          </div>
         </div>
       </section>
 
@@ -142,7 +209,7 @@ const Index = () => {
             <RegionFilter value={regionFilter} onChange={setRegionFilter} />
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {sortedProducts.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <Search className="h-12 w-12 mx-auto text-muted-foreground/30" />
               <p className="text-muted-foreground">No se encontraron artículos</p>
@@ -153,20 +220,7 @@ const Index = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredProducts.map((product, i) => (
-                <div
-                  key={product.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  <ProductCard
-                    product={product}
-                    onClick={() => setSelectedProduct(product)}
-                    saved={savedIds.has(product.id)}
-                    onToggleSave={() => toggleSaved(product.id)}
-                  />
-                </div>
-              ))}
+              {renderFeedItems()}
             </div>
           )}
         </div>
@@ -194,6 +248,7 @@ const Index = () => {
           onClose={() => setSelectedProduct(null)}
           onViewProfile={handleViewProfile}
           onPropose={() => handlePropose(selectedProduct)}
+          onBoost={() => handleBoost(selectedProduct)}
           saved={savedIds.has(selectedProduct.id)}
           onToggleSave={() => toggleSaved(selectedProduct.id)}
         />
@@ -213,6 +268,7 @@ const Index = () => {
       {activePanel === "publish" && <PublishModal onClose={() => setActivePanel(null)} />}
       {activePanel === "notifications" && <NotificationsPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "chat" && <ChatPanel onClose={() => setActivePanel(null)} />}
+      {activePanel === "pricing" && <PricingModal onClose={() => setActivePanel(null)} />}
       {activePanel === "saved" && (
         <SavedItems
           products={savedProducts}
@@ -226,6 +282,10 @@ const Index = () => {
 
       {proposalProduct && (
         <TruequeProposal product={proposalProduct} onClose={() => setProposalProduct(null)} />
+      )}
+
+      {boostProduct && (
+        <BoostModal product={boostProduct} onClose={() => setBoostProduct(null)} />
       )}
     </div>
   );
