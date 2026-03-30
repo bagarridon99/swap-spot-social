@@ -1,15 +1,17 @@
-import { MapPin, ArrowLeftRight } from "lucide-react";
+import { MapPin, ArrowLeftRight, Heart } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Product } from "@/data/mockProducts";
 
 interface ProductCardProps {
   product: Product;
   onClick?: () => void;
+  saved?: boolean;
+  onToggleSave?: () => void;
 }
 
-const ProductCard = ({ product, onClick }: ProductCardProps) => {
+const ProductCard = ({ product, onClick, saved, onToggleSave }: ProductCardProps) => {
   if (!product) return null;
-  const { image, title, wantsInReturn, condition, user, timeAgo } = product;
+  const { image, title, wantsInReturn, condition, user, timeAgo, views } = product;
 
   return (
     <div
@@ -29,9 +31,18 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
           <ArrowLeftRight className="h-3 w-3" />
           Trueque
         </span>
-        <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded-full font-medium">
+        <span className="absolute top-3 right-12 bg-card/90 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded-full font-medium">
           {condition}
         </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave?.();
+          }}
+          className="absolute top-3 right-3 h-7 w-7 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors"
+        >
+          <Heart className={`h-3.5 w-3.5 ${saved ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+        </button>
       </div>
 
       <div className="p-4 space-y-3">
@@ -57,7 +68,10 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
           </div>
         </div>
 
-        <p className="text-[11px] text-muted-foreground">{timeAgo}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-muted-foreground">{timeAgo}</p>
+          {views && <p className="text-[11px] text-muted-foreground">{views} visitas</p>}
+        </div>
       </div>
     </div>
   );
