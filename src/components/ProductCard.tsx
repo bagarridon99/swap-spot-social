@@ -8,6 +8,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onClick }: ProductCardProps) => {
+  if (!product) return null;
   const { image, title, wantsInReturn, condition, user, timeAgo } = product;
 
   return (
