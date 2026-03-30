@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart } from "lucide-react";
+import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -8,11 +8,12 @@ interface MarketplaceHeaderProps {
   onNotifications: () => void;
   onChat: () => void;
   onSaved: () => void;
+  onPricing: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
 }
 
-const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
+const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-4">
@@ -36,6 +37,15 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, search
         </div>
 
         <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="hidden lg:flex gap-1.5 rounded-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600"
+            onClick={onPricing}
+          >
+            <Crown className="h-4 w-4" />
+            Premium
+          </Button>
           <Button size="sm" className="hidden sm:flex gap-1.5 rounded-full" onClick={onPublish}>
             <Plus className="h-4 w-4" />
             Publicar

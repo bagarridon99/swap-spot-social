@@ -34,6 +34,8 @@ export interface Product {
   user: UserProfile;
   saved?: boolean;
   views?: number;
+  boosted?: boolean;
+  premium?: boolean;
 }
 
 export const chileanRegions = [
@@ -156,6 +158,8 @@ export const mockProducts: Product[] = [
     timeAgo: "Hace 2 horas",
     user: mockUsers[0],
     views: 124,
+    boosted: true,
+    premium: true,
   },
   {
     id: 2,
@@ -212,6 +216,7 @@ export const mockProducts: Product[] = [
     timeAgo: "Hace 8 horas",
     user: mockUsers[4],
     views: 98,
+    premium: true,
   },
   {
     id: 6,
