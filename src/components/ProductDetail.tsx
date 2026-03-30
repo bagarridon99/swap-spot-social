@@ -11,46 +11,47 @@ import {
   BadgeCheck,
   X,
   Zap,
+  Eye,
+  Flag,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Product } from "@/data/mockProducts";
+import { toast } from "sonner";
 
 interface ProductDetailProps {
   product: Product;
   onClose: () => void;
   onViewProfile: (userId: string) => void;
+  onPropose: () => void;
+  saved?: boolean;
+  onToggleSave?: () => void;
 }
 
-const StarRating = ({ rating }: { rating: number }) => {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${
-            star <= Math.floor(rating)
-              ? "fill-amber-400 text-amber-400"
-              : star <= rating
-              ? "fill-amber-400/50 text-amber-400"
-              : "text-border"
-          }`}
-        />
-      ))}
-    </div>
-  );
-};
+const StarRating = ({ rating }: { rating: number }) => (
+  <div className="flex items-center gap-1">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        className={`h-4 w-4 ${
+          star <= Math.floor(rating)
+            ? "fill-amber-400 text-amber-400"
+            : star <= rating
+            ? "fill-amber-400/50 text-amber-400"
+            : "text-border"
+        }`}
+      />
+    ))}
+  </div>
+);
 
-const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) => {
+const ProductDetail = ({ product, onClose, onViewProfile, onPropose, saved, onToggleSave }: ProductDetailProps) => {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative w-full max-w-3xl max-h-[92vh] bg-card rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-fade-in">
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors"
@@ -62,11 +63,7 @@ const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) 
           <div className="grid sm:grid-cols-2 gap-0">
             {/* Image */}
             <div className="relative aspect-square sm:aspect-auto sm:h-full">
-              <img
-                src={product.image}
-                alt={product.title}
-                className="h-full w-full object-cover"
-              />
+              <img src={product.image} alt={product.title} className="h-full w-full object-cover" />
               <div className="absolute top-4 left-4 flex gap-2">
                 <span className="swap-badge">
                   <ArrowLeftRight className="h-3 w-3" />
@@ -81,8 +78,16 @@ const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) 
             {/* Info */}
             <div className="p-6 space-y-5">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">{product.category} · {product.timeAgo}</p>
-                <h2 className="font-display text-2xl font-bold text-foreground">{product.title}</h2>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{product.category} · {product.timeAgo}</p>
+                  {product.views && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Eye className="h-3 w-3" />
+                      {product.views}
+                    </div>
+                  )}
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground mt-1">{product.title}</h2>
               </div>
 
               <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
@@ -117,9 +122,7 @@ const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) 
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-foreground text-sm">{product.user.name}</span>
-                        {product.user.verified && (
-                          <BadgeCheck className="h-4 w-4 text-primary" />
-                        )}
+                        {product.user.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <StarRating rating={product.user.rating} />
@@ -148,11 +151,11 @@ const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) 
                 </div>
               </div>
 
-              {/* Location & time */}
+              {/* Location */}
               <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" />
-                  {product.user.location}
+                  {product.user.location}, {product.user.region}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" />
@@ -168,20 +171,34 @@ const ProductDetail = ({ product, onClose, onViewProfile }: ProductDetailProps) 
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
-                <Button className="flex-1 gap-2 rounded-full">
+                <Button className="flex-1 gap-2 rounded-full" onClick={onPropose}>
                   <Zap className="h-4 w-4" />
                   Proponer trueque
                 </Button>
                 <Button variant="outline" size="icon" className="rounded-full shrink-0">
                   <MessageCircle className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-full shrink-0">
-                  <Heart className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full shrink-0"
+                  onClick={(e) => { e.stopPropagation(); onToggleSave?.(); }}
+                >
+                  <Heart className={`h-4 w-4 ${saved ? "fill-accent text-accent" : ""}`} />
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-full shrink-0">
+                <Button variant="outline" size="icon" className="rounded-full shrink-0" onClick={() => toast.success("Link copiado al portapapeles")}>
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>
+
+              {/* Report */}
+              <button
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                onClick={() => toast.info("Gracias por reportar. Revisaremos esta publicación.")}
+              >
+                <Flag className="h-3 w-3" />
+                Reportar publicación
+              </button>
             </div>
           </div>
         </div>
