@@ -158,6 +158,8 @@ export const mockProducts: Product[] = [
     timeAgo: "Hace 2 horas",
     user: mockUsers[0],
     views: 124,
+    boosted: true,
+    premium: true,
   },
   {
     id: 2,
