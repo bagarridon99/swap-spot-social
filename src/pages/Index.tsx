@@ -1,11 +1,26 @@
+import { useState } from "react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
-import { mockProducts } from "@/data/mockProducts";
+import ProductDetail from "@/components/ProductDetail";
+import UserProfileView from "@/components/UserProfileView";
+import { mockProducts, mockUsers } from "@/data/mockProducts";
+import type { Product, UserProfile } from "@/data/mockProducts";
 import { ArrowLeftRight, TrendingUp, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+
+  const handleViewProfile = (userId: string) => {
+    const user = mockUsers.find((u) => u.id === userId);
+    if (user) {
+      setSelectedProduct(null);
+      setSelectedUser(user);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <MarketplaceHeader />
@@ -51,13 +66,11 @@ const Index = () => {
 
       {/* Main content */}
       <main className="container py-8 space-y-8">
-        {/* Categories */}
         <div>
           <h2 className="font-display text-xl font-semibold text-foreground mb-4">Categorías</h2>
           <CategoryFilter />
         </div>
 
-        {/* Products Grid */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-semibold text-foreground">Publicaciones recientes</h2>
@@ -72,7 +85,7 @@ const Index = () => {
                 className="animate-fade-in"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <ProductCard {...product} />
+                <ProductCard product={product} onClick={() => setSelectedProduct(product)} />
               </div>
             ))}
           </div>
@@ -82,10 +95,31 @@ const Index = () => {
       {/* Mobile FAB */}
       <Button
         size="icon"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden z-50"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden z-40"
       >
         <ArrowLeftRight className="h-6 w-6" />
       </Button>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetail
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onViewProfile={handleViewProfile}
+        />
+      )}
+
+      {/* User Profile View */}
+      {selectedUser && (
+        <UserProfileView
+          user={selectedUser}
+          onBack={() => setSelectedUser(null)}
+          onProductClick={(product) => {
+            setSelectedUser(null);
+            setSelectedProduct(product);
+          }}
+        />
+      )}
     </div>
   );
 };
