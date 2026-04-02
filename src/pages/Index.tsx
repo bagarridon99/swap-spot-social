@@ -22,7 +22,7 @@ import TradeEvents from "@/components/TradeEvents";
 import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { mockProducts, mockUsers } from "@/data/mockProducts";
 import type { Product, UserProfile } from "@/data/mockProducts";
-import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown } from "lucide-react";
+import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | null;
