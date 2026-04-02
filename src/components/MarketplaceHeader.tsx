@@ -14,7 +14,7 @@ interface MarketplaceHeaderProps {
   onSearchChange: (q: string) => void;
 }
 
-const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
+const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-4">
