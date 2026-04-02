@@ -60,6 +60,7 @@ const Index = () => {
     return mockProducts.filter((p) => {
       if (activeCategory !== "Todo" && p.category !== activeCategory) return false;
       if (regionFilter !== "all" && p.user.region !== regionFilter) return false;
+      if (comunaFilter !== "all" && p.user.location !== comunaFilter) return false;
       const q = (searchQuery || mobileSearch).toLowerCase();
       if (q && !p.title.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q) && !p.wantsInReturn.toLowerCase().includes(q)) return false;
       return true;
