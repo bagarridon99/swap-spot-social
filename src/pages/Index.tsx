@@ -14,6 +14,7 @@ import TruequeProposal from "@/components/TruequeProposal";
 import RegionFilter from "@/components/RegionFilter";
 import PricingModal from "@/components/PricingModal";
 import BoostModal from "@/components/BoostModal";
+import SettingsPanel from "@/components/SettingsPanel";
 import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { mockProducts, mockUsers } from "@/data/mockProducts";
 import type { Product, UserProfile } from "@/data/mockProducts";
