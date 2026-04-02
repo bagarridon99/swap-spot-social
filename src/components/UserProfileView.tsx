@@ -7,6 +7,10 @@ import {
   Shield,
   Zap,
   MessageCircle,
+  Award,
+  Trophy,
+  Flame,
+  Crown,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
