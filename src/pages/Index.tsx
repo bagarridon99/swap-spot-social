@@ -65,7 +65,7 @@ const Index = () => {
       if (q && !p.title.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q) && !p.wantsInReturn.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [activeCategory, regionFilter, searchQuery, mobileSearch]);
+  }, [activeCategory, regionFilter, comunaFilter, searchQuery, mobileSearch]);
 
   // Sort: boosted first
   const sortedProducts = useMemo(() => {
