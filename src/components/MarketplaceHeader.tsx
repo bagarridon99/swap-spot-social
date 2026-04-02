@@ -9,6 +9,7 @@ interface MarketplaceHeaderProps {
   onChat: () => void;
   onSaved: () => void;
   onPricing: () => void;
+  onSettings: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
 }
