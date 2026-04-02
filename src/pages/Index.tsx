@@ -284,6 +284,13 @@ const Index = () => {
       {activePanel === "notifications" && <NotificationsPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "chat" && <ChatPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "pricing" && <PricingModal onClose={() => setActivePanel(null)} />}
+      {activePanel === "settings" && (
+        <SettingsPanel
+          onClose={() => setActivePanel(null)}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
+        />
+      )}
       {activePanel === "saved" && (
         <SavedItems
           products={savedProducts}
