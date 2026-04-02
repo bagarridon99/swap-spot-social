@@ -25,7 +25,7 @@ import type { Product, UserProfile } from "@/data/mockProducts";
 import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | null;
+type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | "discover" | "history" | "map" | "events" | null;
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
