@@ -15,13 +15,17 @@ import RegionFilter from "@/components/RegionFilter";
 import PricingModal from "@/components/PricingModal";
 import BoostModal from "@/components/BoostModal";
 import SettingsPanel from "@/components/SettingsPanel";
+import DiscoverMode from "@/components/DiscoverMode";
+import TradeHistory from "@/components/TradeHistory";
+import MapExplorer from "@/components/MapExplorer";
+import TradeEvents from "@/components/TradeEvents";
 import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { mockProducts, mockUsers } from "@/data/mockProducts";
 import type { Product, UserProfile } from "@/data/mockProducts";
-import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown } from "lucide-react";
+import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | null;
+type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | "discover" | "history" | "map" | "events" | null;
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -206,8 +210,29 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Quick access bar */}
+      <div className="container pt-8 pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {[
+            { icon: Compass, label: "Descubrir", panel: "discover" as Panel, color: "text-primary" },
+            { icon: Map, label: "Mapa", panel: "map" as Panel, color: "text-primary" },
+            { icon: History, label: "Historial", panel: "history" as Panel, color: "text-primary" },
+            { icon: CalendarDays, label: "Eventos", panel: "events" as Panel, color: "text-primary" },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={() => setActivePanel(item.panel)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-card border hover:bg-secondary/50 transition-colors whitespace-nowrap"
+            >
+              <item.icon className={`h-4 w-4 ${item.color}`} />
+              <span className="text-sm font-medium text-foreground">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Main content */}
-      <main className="container py-8 space-y-8">
+      <main className="container py-4 space-y-8">
         <div>
           <h2 className="font-display text-xl font-semibold text-foreground mb-4">Categorías</h2>
           <CategoryFilter active={activeCategory} onSelect={setActiveCategory} />
@@ -301,6 +326,29 @@ const Index = () => {
           }}
         />
       )}
+
+      {activePanel === "discover" && (
+        <DiscoverMode
+          onClose={() => setActivePanel(null)}
+          onProductClick={(product) => {
+            setActivePanel(null);
+            setSelectedProduct(product);
+          }}
+          savedIds={savedIds}
+          onToggleSave={toggleSaved}
+        />
+      )}
+      {activePanel === "history" && <TradeHistory onClose={() => setActivePanel(null)} />}
+      {activePanel === "map" && (
+        <MapExplorer
+          onClose={() => setActivePanel(null)}
+          onProductClick={(product) => {
+            setActivePanel(null);
+            setSelectedProduct(product);
+          }}
+        />
+      )}
+      {activePanel === "events" && <TradeEvents onClose={() => setActivePanel(null)} />}
 
       {proposalProduct && (
         <TruequeProposal product={proposalProduct} onClose={() => setProposalProduct(null)} />

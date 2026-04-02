@@ -7,6 +7,10 @@ import {
   Shield,
   Zap,
   MessageCircle,
+  Award,
+  Trophy,
+  Flame,
+  Crown,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -116,22 +120,62 @@ const UserProfileView = ({ user, onBack, onProductClick }: UserProfileViewProps)
           </div>
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-2">
-          {user.verified && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-              <Shield className="h-3.5 w-3.5" />
-              Verificado
+        {/* Badges & Reputation */}
+        <div className="space-y-3">
+          <h2 className="font-display text-lg font-semibold text-foreground">Insignias</h2>
+          <div className="flex flex-wrap gap-2">
+            {user.verified && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                <Shield className="h-3.5 w-3.5" />
+                Verificado
+              </div>
+            )}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+              <Calendar className="h-3.5 w-3.5" />
+              Miembro desde {user.memberSince}
             </div>
-          )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-            <Calendar className="h-3.5 w-3.5" />
-            Miembro desde {user.memberSince}
+            {user.totalSwaps >= 20 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 text-xs font-medium">
+                <Trophy className="h-3.5 w-3.5" />
+                Super Truequero
+              </div>
+            )}
+            {user.totalSwaps >= 10 && (
+              <div className="swap-badge text-xs">
+                <Zap className="h-3.5 w-3.5" />
+                Truequeador experto
+              </div>
+            )}
+            {user.rating >= 4.8 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                <Star className="h-3.5 w-3.5" />
+                Top valorado
+              </div>
+            )}
+            {user.responseRate >= 95 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+                <Flame className="h-3.5 w-3.5" />
+                Respuesta rápida
+              </div>
+            )}
+            {user.totalSwaps >= 30 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/20 text-amber-600 text-xs font-medium">
+                <Crown className="h-3.5 w-3.5" />
+                Top del mes
+              </div>
+            )}
           </div>
-          {user.totalSwaps >= 20 && (
-            <div className="swap-badge text-xs">
-              <Zap className="h-3.5 w-3.5" />
-              Truequeador experto
+
+          {/* Progress to next badge */}
+          {user.totalSwaps < 20 && (
+            <div className="p-3 rounded-xl bg-secondary/50 border">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-muted-foreground">Próxima insignia: <strong className="text-foreground">Super Truequero</strong></span>
+                <span className="text-primary font-medium">{user.totalSwaps}/20 trueques</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(user.totalSwaps / 20) * 100}%` }} />
+              </div>
             </div>
           )}
         </div>
