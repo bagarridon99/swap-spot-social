@@ -229,7 +229,7 @@ const Index = () => {
               <Search className="h-12 w-12 mx-auto text-muted-foreground/30" />
               <p className="text-muted-foreground">No se encontraron artículos</p>
               <p className="text-sm text-muted-foreground">Prueba con otra categoría o región</p>
-              <Button variant="outline" className="rounded-full mt-2" onClick={() => { setActiveCategory("Todo"); setRegionFilter("all"); setSearchQuery(""); setMobileSearch(""); }}>
+              <Button variant="outline" className="rounded-full mt-2" onClick={() => { setActiveCategory("Todo"); setRegionFilter("all"); setComunaFilter("all"); setSearchQuery(""); setMobileSearch(""); }}>
                 Limpiar filtros
               </Button>
             </div>
