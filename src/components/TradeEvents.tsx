@@ -223,7 +223,5 @@ const TradeEvents = ({ onClose }: TradeEventsProps) => {
   );
 };
 
-// Need useState import
-import { useState } from "react";
 
 export default TradeEvents;
