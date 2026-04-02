@@ -31,9 +31,21 @@ const Index = () => {
   const [boostProduct, setBoostProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState("Todo");
   const [regionFilter, setRegionFilter] = useState("all");
+  const [comunaFilter, setComunaFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
   const [mobileSearch, setMobileSearch] = useState("");
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("dark");
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("truequeya-dark", darkMode ? "1" : "0");
+  }, [darkMode]);
 
   const toggleSaved = (id: number) => {
     setSavedIds((prev) => {
