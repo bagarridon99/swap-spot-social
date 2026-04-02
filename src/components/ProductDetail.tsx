@@ -175,12 +175,11 @@ const ProductDetail = ({ product, onClose, onViewProfile, onPropose, onBoost, sa
                 </div>
               </div>
 
-              {/* Location */}
+              {/* Location Map */}
+              <LocationMap location={product.user.location} region={product.user.region} />
+
+              {/* Location details */}
               <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {product.user.location}, {product.user.region}
-                </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" />
                   Miembro desde {product.user.memberSince}
