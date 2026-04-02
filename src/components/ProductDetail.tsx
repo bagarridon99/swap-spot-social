@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Product } from "@/data/mockProducts";
+import LocationMap from "@/components/LocationMap";
 import { toast } from "sonner";
 
 interface ProductDetailProps {
