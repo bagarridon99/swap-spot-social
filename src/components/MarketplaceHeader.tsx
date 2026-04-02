@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown } from "lucide-react";
+import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -9,11 +9,12 @@ interface MarketplaceHeaderProps {
   onChat: () => void;
   onSaved: () => void;
   onPricing: () => void;
+  onSettings: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
 }
 
-const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
+const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-4">
@@ -60,6 +61,9 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
           <Button variant="ghost" size="icon" className="rounded-full relative" onClick={onChat}>
             <MessageCircle className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={onSettings}>
+            <Settings className="h-5 w-5" />
           </Button>
           <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/20">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">

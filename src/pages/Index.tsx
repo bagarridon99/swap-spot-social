@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
@@ -14,13 +14,14 @@ import TruequeProposal from "@/components/TruequeProposal";
 import RegionFilter from "@/components/RegionFilter";
 import PricingModal from "@/components/PricingModal";
 import BoostModal from "@/components/BoostModal";
+import SettingsPanel from "@/components/SettingsPanel";
 import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { mockProducts, mockUsers } from "@/data/mockProducts";
 import type { Product, UserProfile } from "@/data/mockProducts";
 import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | null;
+type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | null;
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -30,9 +31,21 @@ const Index = () => {
   const [boostProduct, setBoostProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState("Todo");
   const [regionFilter, setRegionFilter] = useState("all");
+  const [comunaFilter, setComunaFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
   const [mobileSearch, setMobileSearch] = useState("");
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("dark");
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("truequeya-dark", darkMode ? "1" : "0");
+  }, [darkMode]);
 
   const toggleSaved = (id: number) => {
     setSavedIds((prev) => {
@@ -47,11 +60,12 @@ const Index = () => {
     return mockProducts.filter((p) => {
       if (activeCategory !== "Todo" && p.category !== activeCategory) return false;
       if (regionFilter !== "all" && p.user.region !== regionFilter) return false;
+      if (comunaFilter !== "all" && p.user.location !== comunaFilter) return false;
       const q = (searchQuery || mobileSearch).toLowerCase();
       if (q && !p.title.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q) && !p.wantsInReturn.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [activeCategory, regionFilter, searchQuery, mobileSearch]);
+  }, [activeCategory, regionFilter, comunaFilter, searchQuery, mobileSearch]);
 
   // Sort: boosted first
   const sortedProducts = useMemo(() => {
@@ -126,6 +140,7 @@ const Index = () => {
         onChat={() => setActivePanel("chat")}
         onSaved={() => setActivePanel("saved")}
         onPricing={() => setActivePanel("pricing")}
+        onSettings={() => setActivePanel("settings")}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -206,7 +221,7 @@ const Index = () => {
                 <span className="text-primary ml-2 text-base">· {activeCategory}</span>
               )}
             </h2>
-            <RegionFilter value={regionFilter} onChange={setRegionFilter} />
+            <RegionFilter value={regionFilter} onChange={setRegionFilter} comunaValue={comunaFilter} onComunaChange={setComunaFilter} />
           </div>
 
           {sortedProducts.length === 0 ? (
@@ -214,7 +229,7 @@ const Index = () => {
               <Search className="h-12 w-12 mx-auto text-muted-foreground/30" />
               <p className="text-muted-foreground">No se encontraron artículos</p>
               <p className="text-sm text-muted-foreground">Prueba con otra categoría o región</p>
-              <Button variant="outline" className="rounded-full mt-2" onClick={() => { setActiveCategory("Todo"); setRegionFilter("all"); setSearchQuery(""); setMobileSearch(""); }}>
+              <Button variant="outline" className="rounded-full mt-2" onClick={() => { setActiveCategory("Todo"); setRegionFilter("all"); setComunaFilter("all"); setSearchQuery(""); setMobileSearch(""); }}>
                 Limpiar filtros
               </Button>
             </div>
@@ -269,6 +284,13 @@ const Index = () => {
       {activePanel === "notifications" && <NotificationsPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "chat" && <ChatPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "pricing" && <PricingModal onClose={() => setActivePanel(null)} />}
+      {activePanel === "settings" && (
+        <SettingsPanel
+          onClose={() => setActivePanel(null)}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
+        />
+      )}
       {activePanel === "saved" && (
         <SavedItems
           products={savedProducts}
