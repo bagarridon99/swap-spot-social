@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown } from "lucide-react";
+import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
