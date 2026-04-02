@@ -62,6 +62,9 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
             <MessageCircle className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
           </Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={onSettings}>
+            <Settings className="h-5 w-5" />
+          </Button>
           <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/20">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               TU
