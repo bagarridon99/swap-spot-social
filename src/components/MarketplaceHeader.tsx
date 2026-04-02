@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown, Settings } from "lucide-react";
+import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface MarketplaceHeaderProps {
   onPublish: () => void;
@@ -15,6 +16,16 @@ interface MarketplaceHeaderProps {
 }
 
 const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
+  const { user, logout } = useAuth();
+
+  const displayName = user?.displayName || user?.email || "Usuario";
+  const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Sesión cerrada");
+  };
+
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-4">
@@ -56,18 +67,19 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full relative" onClick={onNotifications}>
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full relative" onClick={onChat}>
             <MessageCircle className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full" onClick={onSettings}>
             <Settings className="h-5 w-5" />
           </Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={handleLogout} title="Cerrar sesión">
+            <LogOut className="h-5 w-5" />
+          </Button>
           <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/20">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-              TU
+              {initials}
             </AvatarFallback>
           </Avatar>
         </div>

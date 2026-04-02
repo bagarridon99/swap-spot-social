@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Upload, ArrowLeftRight, MapPin, Plus, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Upload, ArrowLeftRight, MapPin, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { categories } from "@/components/CategoryFilter";
 import { chileanRegions } from "@/data/mockProducts";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { addProduct, uploadProductImage } from "@/lib/firestore";
 
 interface PublishModalProps {
   onClose: () => void;
@@ -17,6 +19,7 @@ interface PublishModalProps {
 const conditions = ["Nuevo", "Como nuevo", "Buen estado", "Usado", "Para reparar"];
 
 const PublishModal = ({ onClose }: PublishModalProps) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -25,6 +28,18 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
   const [wantsInReturn, setWantsInReturn] = useState("");
   const [acceptableItem, setAcceptableItem] = useState("");
   const [acceptableItems, setAcceptableItems] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const addAcceptableItem = () => {
     if (acceptableItem.trim() && acceptableItems.length < 6) {
@@ -37,13 +52,46 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
     setAcceptableItems(acceptableItems.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title || !description || !category || !condition || !region || !wantsInReturn) {
       toast.error("Por favor completa todos los campos obligatorios");
       return;
     }
-    toast.success("¡Publicación creada! Tu artículo ya está visible para otros usuarios.");
-    onClose();
+    if (!imageFile) {
+      toast.error("Sube una imagen de tu artículo");
+      return;
+    }
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const imageUrl = await uploadProductImage(imageFile, user.uid);
+      const displayName = user.displayName || user.email || "Usuario";
+      const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+      await addProduct({
+        title,
+        description,
+        category,
+        condition,
+        wantsInReturn,
+        acceptableItems,
+        imageUrl,
+        region,
+        location: region,
+        userId: user.uid,
+        userName: displayName,
+        userInitials: initials,
+      });
+
+      toast.success("¡Publicación creada! Tu artículo ya está visible para otros usuarios.");
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Error al publicar: " + (err?.message || "Intenta de nuevo"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,10 +107,20 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
 
         <div className="overflow-y-auto max-h-[75vh] p-6 space-y-5">
           {/* Image upload area */}
-          <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Arrastra fotos aquí o haz clic para subir</p>
-            <p className="text-xs text-muted-foreground mt-1">Máximo 5 fotos · JPG, PNG</p>
+          <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleImageSelect} />
+          <div
+            onClick={() => fileRef.current?.click()}
+            className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer overflow-hidden"
+          >
+            {imagePreview ? (
+              <img src={imagePreview} alt="Preview" className="max-h-40 mx-auto rounded-lg object-cover" />
+            ) : (
+              <>
+                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Haz clic para subir una foto</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG</p>
+              </>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -153,7 +211,9 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
 
         <div className="p-4 border-t flex gap-3">
           <Button variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1 rounded-full" onClick={handleSubmit}>Publicar</Button>
+          <Button className="flex-1 rounded-full" onClick={handleSubmit} disabled={loading}>
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Publicando...</> : "Publicar"}
+          </Button>
         </div>
       </div>
     </div>

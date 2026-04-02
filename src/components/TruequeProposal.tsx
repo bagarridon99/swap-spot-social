@@ -1,35 +1,78 @@
 import { useState } from "react";
-import { X, ArrowLeftRight, ArrowRight, CheckCircle2 } from "lucide-react";
+import { X, ArrowLeftRight, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { Product } from "@/data/mockProducts";
-import { mockProducts } from "@/data/mockProducts";
+import type { FirestoreProduct } from "@/lib/firestore";
+import { sendProposal, createOrGetChat, sendMessage } from "@/lib/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface TruequeProposalProps {
-  product: Product;
+  product: FirestoreProduct;
+  myProducts: FirestoreProduct[];
   onClose: () => void;
 }
 
-const TruequeProposal = ({ product, onClose }: TruequeProposalProps) => {
-  const [selectedItem, setSelectedItem] = useState<number | null>(null);
+const TruequeProposal = ({ product, myProducts, onClose }: TruequeProposalProps) => {
+  const { user } = useAuth();
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Mock "my items" - first 3 products as user's own
-  const myItems = mockProducts.slice(0, 3);
-
-  const handleSubmit = () => {
-    if (!selectedItem) {
+  const handleSubmit = async () => {
+    if (!selectedItem || !user) {
       toast.error("Selecciona un artículo para ofrecer");
       return;
     }
-    setSubmitted(true);
-    setTimeout(() => {
-      toast.success("¡Propuesta enviada! Te notificaremos cuando responda.");
-      onClose();
-    }, 2000);
+
+    const offered = myProducts.find((p) => p.id === selectedItem);
+    if (!offered) return;
+
+    setLoading(true);
+    try {
+      const displayName = user.displayName || user.email || "Usuario";
+      const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+      // Send proposal
+      await sendProposal({
+        fromUserId: user.uid,
+        fromUserName: displayName,
+        toUserId: product.userId,
+        toUserName: product.userName,
+        offeredProductId: offered.id!,
+        offeredProductTitle: offered.title,
+        offeredProductImage: offered.imageUrl,
+        requestedProductId: product.id!,
+        requestedProductTitle: product.title,
+        requestedProductImage: product.imageUrl,
+        message: message || `Te propongo intercambiar mi "${offered.title}" por tu "${product.title}"`,
+      });
+
+      // Create chat and send message
+      const chatId = await createOrGetChat(
+        user.uid, displayName, initials,
+        product.userId, product.userName, product.userInitials,
+      );
+      await sendMessage(
+        chatId,
+        user.uid,
+        `🔄 Propuesta de trueque: Mi "${offered.title}" por tu "${product.title}". ${message}`,
+        product.userId,
+      );
+
+      setSubmitted(true);
+      setTimeout(() => {
+        toast.success("¡Propuesta enviada! Te notificaremos cuando responda.");
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Error al enviar propuesta");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -40,7 +83,7 @@ const TruequeProposal = ({ product, onClose }: TruequeProposalProps) => {
           <CheckCircle2 className="h-16 w-16 mx-auto text-primary" />
           <h3 className="font-display text-xl font-bold text-foreground">¡Propuesta enviada!</h3>
           <p className="text-sm text-muted-foreground">
-            {product.user.name} recibirá tu propuesta y podrá aceptarla o contraproponer.
+            {product.userName} recibirá tu propuesta y podrá aceptarla o contraproponer.
           </p>
         </div>
       </div>
@@ -66,14 +109,14 @@ const TruequeProposal = ({ product, onClose }: TruequeProposalProps) => {
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Quieres obtener</p>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 border">
-              <img src={product.image} alt={product.title} className="h-14 w-14 rounded-lg object-cover" />
+              <img src={product.imageUrl} alt={product.title} className="h-14 w-14 rounded-lg object-cover" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground line-clamp-1">{product.title}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">{product.user.initials}</AvatarFallback>
+                    <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">{product.userInitials}</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-muted-foreground">{product.user.name}</span>
+                  <span className="text-xs text-muted-foreground">{product.userName}</span>
                 </div>
               </div>
             </div>
@@ -90,26 +133,32 @@ const TruequeProposal = ({ product, onClose }: TruequeProposalProps) => {
           {/* Select your item */}
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ofreces a cambio</p>
-            <div className="grid grid-cols-1 gap-2">
-              {myItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedItem(item.id)}
-                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    selectedItem === item.id
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <img src={item.image} alt={item.title} className="h-12 w-12 rounded-lg object-cover" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.condition}</p>
+            {myProducts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Primero publica un artículo para poder proponer trueques
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {myProducts.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedItem(item.id!)}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      selectedItem === item.id
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <img src={item.imageUrl} alt={item.title} className="h-12 w-12 rounded-lg object-cover" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.condition}</p>
+                    </div>
+                    {selectedItem === item.id && <CheckCircle2 className="h-5 w-5 text-primary" />}
                   </div>
-                  {selectedItem === item.id && <CheckCircle2 className="h-5 w-5 text-primary" />}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Message */}
@@ -126,8 +175,8 @@ const TruequeProposal = ({ product, onClose }: TruequeProposalProps) => {
 
         <div className="p-4 border-t flex gap-3">
           <Button variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1 rounded-full gap-2" onClick={handleSubmit}>
-            <ArrowLeftRight className="h-4 w-4" />
+          <Button className="flex-1 rounded-full gap-2" onClick={handleSubmit} disabled={loading || myProducts.length === 0}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowLeftRight className="h-4 w-4" />}
             Enviar propuesta
           </Button>
         </div>
