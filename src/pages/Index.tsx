@@ -221,7 +221,7 @@ const Index = () => {
                 <span className="text-primary ml-2 text-base">· {activeCategory}</span>
               )}
             </h2>
-            <RegionFilter value={regionFilter} onChange={setRegionFilter} />
+            <RegionFilter value={regionFilter} onChange={setRegionFilter} comunaValue={comunaFilter} onComunaChange={setComunaFilter} />
           </div>
 
           {sortedProducts.length === 0 ? (
