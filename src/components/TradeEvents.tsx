@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X, Calendar, MapPin, Users, Clock, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
