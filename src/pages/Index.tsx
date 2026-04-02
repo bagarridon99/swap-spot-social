@@ -327,6 +327,29 @@ const Index = () => {
         />
       )}
 
+      {activePanel === "discover" && (
+        <DiscoverMode
+          onClose={() => setActivePanel(null)}
+          onProductClick={(product) => {
+            setActivePanel(null);
+            setSelectedProduct(product);
+          }}
+          savedIds={savedIds}
+          onToggleSave={toggleSaved}
+        />
+      )}
+      {activePanel === "history" && <TradeHistory onClose={() => setActivePanel(null)} />}
+      {activePanel === "map" && (
+        <MapExplorer
+          onClose={() => setActivePanel(null)}
+          onProductClick={(product) => {
+            setActivePanel(null);
+            setSelectedProduct(product);
+          }}
+        />
+      )}
+      {activePanel === "events" && <TradeEvents onClose={() => setActivePanel(null)} />}
+
       {proposalProduct && (
         <TruequeProposal product={proposalProduct} onClose={() => setProposalProduct(null)} />
       )}
