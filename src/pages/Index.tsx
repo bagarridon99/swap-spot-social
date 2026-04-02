@@ -210,8 +210,29 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Quick access bar */}
+      <div className="container pt-8 pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {[
+            { icon: Compass, label: "Descubrir", panel: "discover" as Panel, color: "text-primary" },
+            { icon: Map, label: "Mapa", panel: "map" as Panel, color: "text-primary" },
+            { icon: History, label: "Historial", panel: "history" as Panel, color: "text-primary" },
+            { icon: CalendarDays, label: "Eventos", panel: "events" as Panel, color: "text-primary" },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={() => setActivePanel(item.panel)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-card border hover:bg-secondary/50 transition-colors whitespace-nowrap"
+            >
+              <item.icon className={`h-4 w-4 ${item.color}`} />
+              <span className="text-sm font-medium text-foreground">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Main content */}
-      <main className="container py-8 space-y-8">
+      <main className="container py-4 space-y-8">
         <div>
           <h2 className="font-display text-xl font-semibold text-foreground mb-4">Categorías</h2>
           <CategoryFilter active={activeCategory} onSelect={setActiveCategory} />
