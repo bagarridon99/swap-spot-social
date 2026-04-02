@@ -140,6 +140,7 @@ const Index = () => {
         onChat={() => setActivePanel("chat")}
         onSaved={() => setActivePanel("saved")}
         onPricing={() => setActivePanel("pricing")}
+        onSettings={() => setActivePanel("settings")}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
