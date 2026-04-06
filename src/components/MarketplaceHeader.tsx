@@ -13,12 +13,14 @@ interface MarketplaceHeaderProps {
   onSettings: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  unreadChats?: number;
+  unreadNotifications?: number;
 }
 
-const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange }: MarketplaceHeaderProps) => {
+const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange, unreadChats = 0, unreadNotifications = 0 }: MarketplaceHeaderProps) => {
   const { user, logout } = useAuth();
 
-  const displayName = user?.displayName || user?.email || "Usuario";
+  const displayName = user?.user_metadata?.display_name || user?.email || "Usuario";
   const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
@@ -67,9 +69,15 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full relative" onClick={onNotifications}>
             <Bell className="h-5 w-5" />
+            {unreadNotifications > 0 && (
+              <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-card" />
+            )}
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full relative" onClick={onChat}>
             <MessageCircle className="h-5 w-5" />
+            {unreadChats > 0 && (
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary border-2 border-card" />
+            )}
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full" onClick={onSettings}>
             <Settings className="h-5 w-5" />
@@ -77,7 +85,11 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
           <Button variant="ghost" size="icon" className="rounded-full" onClick={handleLogout} title="Cerrar sesión">
             <LogOut className="h-5 w-5" />
           </Button>
-          <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/20">
+          <Avatar
+            className="h-8 w-8 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/60 transition-all"
+            onClick={onSettings}
+            title="Mi perfil y configuración"
+          >
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>

@@ -3,8 +3,8 @@ import { X, ArrowLeftRight, ArrowRight, CheckCircle2, Loader2 } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { FirestoreProduct } from "@/lib/firestore";
-import { sendProposal, createOrGetChat, sendMessage } from "@/lib/firestore";
+import type { FirestoreProduct } from "@/lib/database";
+import { sendProposal, createOrGetChat, sendMessage } from "@/lib/database";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -32,32 +32,26 @@ const TruequeProposal = ({ product, myProducts, onClose }: TruequeProposalProps)
 
     setLoading(true);
     try {
-      const displayName = user.displayName || user.email || "Usuario";
+      const displayName = user.user_metadata?.display_name || user.email || "Usuario";
       const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
       // Send proposal
       await sendProposal({
-        fromUserId: user.uid,
-        fromUserName: displayName,
+        fromUserId: user.id,
         toUserId: product.userId,
-        toUserName: product.userName,
         offeredProductId: offered.id!,
-        offeredProductTitle: offered.title,
-        offeredProductImage: offered.imageUrl,
         requestedProductId: product.id!,
-        requestedProductTitle: product.title,
-        requestedProductImage: product.imageUrl,
         message: message || `Te propongo intercambiar mi "${offered.title}" por tu "${product.title}"`,
-      });
+      }, offered.title, displayName);
 
       // Create chat and send message
       const chatId = await createOrGetChat(
-        user.uid, displayName, initials,
+        user.id, displayName, initials,
         product.userId, product.userName, product.userInitials,
       );
       await sendMessage(
         chatId,
-        user.uid,
+        user.id,
         `🔄 Propuesta de trueque: Mi "${offered.title}" por tu "${product.title}". ${message}`,
         product.userId,
       );

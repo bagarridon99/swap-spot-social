@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { X, Zap, Star, Eye, Clock, TrendingUp, CheckCircle2 } from "lucide-react";
+import { X, Zap, Star, Eye, Clock, TrendingUp, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Product } from "@/data/mockProducts";
+import type { FirestoreProduct } from "@/lib/database";
+import { boostProduct } from "@/lib/database";
 import { toast } from "sonner";
 
 interface BoostModalProps {
-  product: Product;
+  product: FirestoreProduct;
   onClose: () => void;
 }
 
@@ -45,13 +46,23 @@ const boostOptions = [
 const BoostModal = ({ product, onClose }: BoostModalProps) => {
   const [selected, setSelected] = useState("48h");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleBoost = () => {
-    setSubmitted(true);
-    setTimeout(() => {
-      toast.success("¡Publicación destacada! Ahora aparecerá al inicio del feed 🚀");
-      onClose();
-    }, 2000);
+  const handleBoost = async () => {
+    if (!product.id) return;
+    setLoading(true);
+    try {
+      await boostProduct(product.id);
+      setSubmitted(true);
+      setTimeout(() => {
+        toast.success("¡Publicación destacada! Ahora aparecerá al inicio del feed 🚀");
+        onClose();
+      }, 2000);
+    } catch (err) {
+      toast.error("Error al destacar la publicación. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -62,7 +73,7 @@ const BoostModal = ({ product, onClose }: BoostModalProps) => {
           <CheckCircle2 className="h-16 w-16 mx-auto text-primary" />
           <h3 className="font-display text-xl font-bold text-foreground">¡Publicación destacada!</h3>
           <p className="text-sm text-muted-foreground">
-            "{product.title}" ahora aparecerá al inicio del feed con un badge especial.
+            «{product.title}» ahora aparecerá al inicio del feed con un badge especial.
           </p>
         </div>
       </div>
@@ -86,10 +97,10 @@ const BoostModal = ({ product, onClose }: BoostModalProps) => {
         <div className="p-6 space-y-5">
           {/* Product preview */}
           <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 border">
-            <img src={product.image} alt={product.title} className="h-14 w-14 rounded-lg object-cover" />
+            <img src={product.imageUrl} alt={product.title} className="h-14 w-14 rounded-lg object-cover" />
             <div>
               <p className="text-sm font-semibold text-foreground">{product.title}</p>
-              <p className="text-xs text-muted-foreground">{product.views || 0} visitas actuales</p>
+              <p className="text-xs text-muted-foreground">{product.condition} · {product.category}</p>
             </div>
           </div>
 
@@ -141,9 +152,11 @@ const BoostModal = ({ product, onClose }: BoostModalProps) => {
         </div>
 
         <div className="p-4 border-t flex gap-3">
-          <Button variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1 rounded-full gap-2" onClick={handleBoost}>
-            <Zap className="h-4 w-4" />
+          <Button variant="outline" className="flex-1 rounded-full" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button className="flex-1 rounded-full gap-2" onClick={handleBoost} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             Destacar ahora
           </Button>
         </div>

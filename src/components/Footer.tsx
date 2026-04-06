@@ -1,6 +1,12 @@
 import { ArrowLeftRight, Instagram, Twitter, Facebook, Mail } from "lucide-react";
 
-const Footer = () => {
+interface FooterProps {
+  onPricingClick?: () => void;
+  onHowItWorksClick?: () => void;
+  onTermsClick?: () => void;
+}
+
+const Footer = ({ onPricingClick, onHowItWorksClick, onTermsClick }: FooterProps) => {
   return (
     <footer className="bg-card border-t mt-12">
       <div className="container py-12">
@@ -14,16 +20,16 @@ const Footer = () => {
               La comunidad de trueques más grande de Chile. Intercambia lo que ya no usas por lo que necesitas. 🇨🇱
             </p>
             <div className="flex gap-3">
-              <a href="#" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a href="https://instagram.com/truequeya" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="#" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a href="https://twitter.com/truequeya" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Twitter className="h-4 w-4" />
               </a>
-              <a href="#" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a href="https://facebook.com/truequeya" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a href="mailto:hola@truequeya.cl" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Mail className="h-4 w-4" />
               </a>
             </div>
@@ -32,10 +38,10 @@ const Footer = () => {
           <div className="space-y-3">
             <h4 className="font-semibold text-foreground text-sm">Explorar</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Categorías</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Publicaciones recientes</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Cerca de ti</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Trueques destacados</a></li>
+              <li><button onClick={onHowItWorksClick} className="hover:text-primary transition-colors">Categorías</button></li>
+              <li><button onClick={onPricingClick} className="hover:text-primary transition-colors">Publicaciones recientes</button></li>
+              <li><button onClick={onTermsClick} className="hover:text-primary transition-colors">Cerca de ti</button></li>
+              <li><button onClick={onTermsClick} className="hover:text-primary transition-colors">Trueques destacados</button></li>
             </ul>
           </div>
 

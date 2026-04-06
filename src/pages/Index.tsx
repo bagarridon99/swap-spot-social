@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductDetail from "@/components/ProductDetail";
@@ -19,10 +19,11 @@ import MapExplorer from "@/components/MapExplorer";
 import TradeEvents from "@/components/TradeEvents";
 import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeProducts, type FirestoreProduct } from "@/lib/firestore";
+import { subscribeProducts, type FirestoreProduct, subscribeProposals, type Proposal } from "@/lib/database";
 import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | "discover" | "history" | "map" | "events" | null;
@@ -42,16 +43,33 @@ const Index = () => {
   const [mobileSearch, setMobileSearch] = useState("");
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark");
+      return localStorage.getItem("truequeya-dark") === "1";
     }
     return false;
   });
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [notifLoading, setNotifLoading] = useState(true);
+  const prevProposalsLen = useRef<number>(0);
 
   // Subscribe to Firestore products in real-time
   useEffect(() => {
     const unsub = subscribeProducts(setProducts);
     return unsub;
   }, []);
+
+  // Subscribe to proposals for global notification badge & toast
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeProposals(user.id, (data) => {
+      setProposals(data);
+      setNotifLoading(false);
+      if (prevProposalsLen.current > 0 && data.length > prevProposalsLen.current) {
+        toast.info("¡Tienes una nueva propuesta de trueque pendiente!");
+      }
+      prevProposalsLen.current = data.length;
+    });
+    return unsub;
+  }, [user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -68,7 +86,7 @@ const Index = () => {
   };
 
   const myProducts = useMemo(() => {
-    return products.filter((p) => p.userId === user?.uid);
+    return products.filter((p) => p.userId === user?.id);
   }, [products, user]);
 
   const filteredProducts = useMemo(() => {
@@ -186,6 +204,7 @@ const Index = () => {
         onSettings={() => setActivePanel("settings")}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        unreadNotifications={proposals.filter(p => p.status === "pending").length}
       />
 
       {/* Hero */}
@@ -362,7 +381,7 @@ const Index = () => {
                     <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{selectedProduct.location}</p>
                   </div>
                 </div>
-                {selectedProduct.userId !== user?.uid && (
+                {selectedProduct.userId !== user?.id && (
                   <Button className="w-full rounded-full gap-2" onClick={() => handlePropose(selectedProduct)}>
                     <ArrowLeftRight className="h-4 w-4" />
                     Proponer trueque
@@ -375,7 +394,14 @@ const Index = () => {
       )}
 
       {activePanel === "publish" && <PublishModal onClose={() => setActivePanel(null)} />}
-      {activePanel === "notifications" && <NotificationsPanel onClose={() => setActivePanel(null)} />}
+      {activePanel === "notifications" && (
+        <NotificationsPanel 
+          onClose={() => setActivePanel(null)} 
+          onOpenChat={() => setActivePanel("chat")} 
+          proposals={proposals}
+          loading={notifLoading}
+        />
+      )}
       {activePanel === "chat" && <ChatPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "pricing" && <PricingModal onClose={() => setActivePanel(null)} />}
       {activePanel === "settings" && (
@@ -400,7 +426,11 @@ const Index = () => {
             user: { id: p.userId, name: p.userName, initials: p.userInitials, location: p.location, region: p.region, rating: 0, totalReviews: 0, totalSwaps: 0, memberSince: "", bio: "", verified: false, responseRate: 0, responseTime: "" },
           }))}
           onClose={() => setActivePanel(null)}
-          onProductClick={() => {}}
+          onProductClick={(product) => {
+            setActivePanel(null);
+            const fp = savedProducts.find(p => p.userName === product.user.name && p.title === product.title);
+            if (fp) setSelectedProduct(fp);
+          }}
         />
       )}
 
@@ -409,12 +439,11 @@ const Index = () => {
           onClose={() => setActivePanel(null)}
           onProductClick={(product) => {
             setActivePanel(null);
-            // Find matching Firestore product
-            const fp = products.find(p => p.title === product.title);
+            const fp = products.find(p => p.id === product.id?.toString() || p.title === product.title);
             if (fp) setSelectedProduct(fp);
           }}
           savedIds={new Set(Array.from(savedIds).map(Number).filter(n => !isNaN(n)))}
-          onToggleSave={() => {}}
+          onToggleSave={(numId) => { toggleSaved(String(numId)); }}
         />
       )}
       {activePanel === "history" && <TradeHistory onClose={() => setActivePanel(null)} />}
@@ -432,6 +461,10 @@ const Index = () => {
 
       {proposalProduct && (
         <TruequeProposal product={proposalProduct} myProducts={myProducts} onClose={() => setProposalProduct(null)} />
+      )}
+      
+      {boostProduct && (
+        <BoostModal product={boostProduct} onClose={() => setBoostProduct(null)} />
       )}
     </div>
   );

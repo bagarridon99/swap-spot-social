@@ -1,4 +1,4 @@
-import { X, Star, ArrowLeftRight, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight } from "lucide-react";
+import { X, Star, ArrowLeftRight, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -50,7 +50,8 @@ const TradeHistory = ({ onClose }: TradeHistoryProps) => {
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
 
-  const filtered = filter === "all" ? mockTrades : mockTrades.filter((t) => t.status === filter);
+  const activeTradesList = filter === "all" ? mockTrades : mockTrades.filter((t) => t.status === filter);
+  const filtered = activeTradesList.filter((t) => !cancelledIds.has(t.id));
 
   const stats = {
     total: mockTrades.length,
@@ -59,11 +60,28 @@ const TradeHistory = ({ onClose }: TradeHistoryProps) => {
     avgRating: mockTrades.filter((t) => t.rating).reduce((a, t) => a + (t.rating || 0), 0) / (mockTrades.filter((t) => t.rating).length || 1),
   };
 
+  const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
+  const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set());
+
   const submitRating = () => {
+    if (ratingValue === 0) return;
+    // Persist locally (in a real app this would write to Firestore reviews collection)
+    setLocalRatings((prev) => ({ ...prev, [ratingTrade!]: ratingValue }));
     toast.success(`¡Valoración de ${ratingValue} estrellas enviada!`);
     setRatingTrade(null);
     setRatingValue(0);
     setRatingComment("");
+  };
+
+  const handleCancel = (tradeId: string, myItem: string) => {
+    if (window.confirm(`¿Cancelar la propuesta de "${myItem}"?`)) {
+      setCancelledIds((prev) => new Set([...prev, tradeId]));
+      toast.success("Propuesta cancelada");
+    }
+  };
+
+  const handleRemind = (otherUser: string) => {
+    toast.success(`Recordatorio enviado a ${otherUser}`);
   };
 
   return (
@@ -196,13 +214,22 @@ const TradeHistory = ({ onClose }: TradeHistoryProps) => {
                   </>
                 )}
 
-                {trade.status === "pending" && (
+                {trade.status === "pending" && !cancelledIds.has(trade.id) && (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="rounded-full flex-1 text-destructive hover:bg-destructive/10">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full flex-1 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleCancel(trade.id, trade.myItem)}
+                    >
                       Cancelar
                     </Button>
-                    <Button size="sm" className="rounded-full flex-1 gap-1">
-                      <AlertCircle className="h-3 w-3" />
+                    <Button
+                      size="sm"
+                      className="rounded-full flex-1 gap-1"
+                      onClick={() => handleRemind(trade.otherUser)}
+                    >
+                      <Send className="h-3 w-3" />
                       Recordar
                     </Button>
                   </div>

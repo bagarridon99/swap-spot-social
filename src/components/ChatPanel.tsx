@@ -11,7 +11,7 @@ import {
   markChatRead,
   type Chat,
   type ChatMessage,
-} from "@/lib/firestore";
+} from "@/lib/database";
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -28,7 +28,7 @@ const ChatPanel = ({ onClose }: ChatPanelProps) => {
   // Subscribe to chats
   useEffect(() => {
     if (!user) return;
-    return subscribeChats(user.uid, setChats);
+    return subscribeChats(user.id, setChats);
   }, [user]);
 
   // Subscribe to messages of active chat
@@ -43,12 +43,12 @@ const ChatPanel = ({ onClose }: ChatPanelProps) => {
   // Mark chat as read when opened
   useEffect(() => {
     if (activeChat && user) {
-      markChatRead(activeChat, user.uid);
+      markChatRead(activeChat, user.id);
     }
   }, [activeChat, user]);
 
   const activeConv = chats.find((c) => c.id === activeChat);
-  const otherUserId = activeConv?.participants.find((p) => p !== user?.uid) || "";
+  const otherUserId = activeConv?.participants.find((p) => p !== user?.id) || "";
   const otherName = activeConv?.participantNames?.[otherUserId] || "Usuario";
   const otherInitials = activeConv?.participantInitials?.[otherUserId] || "??";
 
@@ -56,7 +56,7 @@ const ChatPanel = ({ onClose }: ChatPanelProps) => {
     if (!message.trim() || !activeChat || !user) return;
     const text = message.trim();
     setMessage("");
-    await sendMessage(activeChat, user.uid, text, otherUserId);
+    await sendMessage(activeChat, user.id, text, otherUserId);
   };
 
   return (
@@ -97,10 +97,10 @@ const ChatPanel = ({ onClose }: ChatPanelProps) => {
               </div>
             ) : (
               chats.map((conv) => {
-                const otherId = conv.participants.find((p) => p !== user?.uid) || "";
+                const otherId = conv.participants.find((p) => p !== user?.id) || "";
                 const name = conv.participantNames?.[otherId] || "Usuario";
                 const initials = conv.participantInitials?.[otherId] || "??";
-                const isUnread = conv.unreadBy?.includes(user?.uid || "");
+                const isUnread = conv.unreadBy?.includes(user?.id || "");
 
                 return (
                   <div
@@ -133,17 +133,17 @@ const ChatPanel = ({ onClose }: ChatPanelProps) => {
                 <p className="text-center text-xs text-muted-foreground py-8">Envía el primer mensaje</p>
               )}
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.senderId === user?.uid ? "justify-end" : "justify-start"}`}>
+                <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm ${
-                      msg.senderId === user?.uid
+                      msg.senderId === user?.id
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-secondary text-secondary-foreground rounded-bl-md"
                     }`}
                   >
                     <p>{msg.text}</p>
-                    <p className={`text-[10px] mt-1 ${msg.senderId === user?.uid ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                      {msg.createdAt?.toDate?.()?.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) || "..."}
+                    <p className={`text-[10px] mt-1 ${msg.senderId === user?.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "..."}
                     </p>
                   </div>
                 </div>

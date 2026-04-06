@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { categories } from "@/components/CategoryFilter";
 import { chileanRegions } from "@/data/mockProducts";
+import { comunasByRegion } from "@/data/chileanLocations";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { addProduct, uploadProductImage } from "@/lib/firestore";
+import { addProduct, uploadProductImage } from "@/lib/database";
 
 interface PublishModalProps {
   onClose: () => void;
@@ -25,6 +26,7 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
   const [region, setRegion] = useState("");
+  const [comuna, setComuna] = useState("");
   const [wantsInReturn, setWantsInReturn] = useState("");
   const [acceptableItem, setAcceptableItem] = useState("");
   const [acceptableItems, setAcceptableItems] = useState<string[]>([]);
@@ -57,6 +59,10 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
       toast.error("Por favor completa todos los campos obligatorios");
       return;
     }
+    if (!comuna) {
+      toast.error("Por favor selecciona tu comuna");
+      return;
+    }
     if (!imageFile) {
       toast.error("Sube una imagen de tu artículo");
       return;
@@ -65,8 +71,8 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
 
     setLoading(true);
     try {
-      const imageUrl = await uploadProductImage(imageFile, user.uid);
-      const displayName = user.displayName || user.email || "Usuario";
+      const imageUrl = await uploadProductImage(imageFile, user.id);
+      const displayName = user.user_metadata?.display_name || user.email || "Usuario";
       const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
       await addProduct({
@@ -78,10 +84,8 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
         acceptableItems,
         imageUrl,
         region,
-        location: region,
-        userId: user.uid,
-        userName: displayName,
-        userInitials: initials,
+        location: comuna,
+        userId: user.id,
       });
 
       toast.success("¡Publicación creada! Tu artículo ya está visible para otros usuarios.");
@@ -163,7 +167,7 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
               <MapPin className="h-3.5 w-3.5" />
               Región *
             </Label>
-            <Select value={region} onValueChange={setRegion}>
+            <Select value={region} onValueChange={(val) => { setRegion(val); setComuna(""); }}>
               <SelectTrigger><SelectValue placeholder="Selecciona tu región" /></SelectTrigger>
               <SelectContent>
                 {chileanRegions.map(r => (
@@ -172,6 +176,23 @@ const PublishModal = ({ onClose }: PublishModalProps) => {
               </SelectContent>
             </Select>
           </div>
+
+          {region && comunasByRegion[region] && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                Comuna *
+              </Label>
+              <Select value={comuna} onValueChange={setComuna}>
+                <SelectTrigger><SelectValue placeholder="Selecciona tu comuna" /></SelectTrigger>
+                <SelectContent>
+                  {comunasByRegion[region].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">
