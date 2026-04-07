@@ -17,8 +17,7 @@ import { ChatStackParamList } from '../../navigation/types';
 import Avatar from '../../components/atoms/Avatar';
 import ChatBubble from '../../components/molecules/ChatBubble';
 import { useAuth } from '../../context/AuthContext';
-import { subscribeToMessages, sendMessage } from '../../services/chatService';
-import { Message } from '../../types';
+import { subscribeToMessages, sendMessage, markChatAsRead, ChatMessage } from '../../services/chatService';
 import { Colors } from '../../constants/colors';
 import { Spacing, Radius, Shadow } from '../../constants/layout';
 import { FontSize, FontWeight } from '../../constants/typography';
@@ -33,7 +32,7 @@ const ChatScreen = () => {
   const { name, initials, online, conversationId } = route.params;
   const { user } = useAuth();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
 
   React.useEffect(() => {
@@ -43,8 +42,12 @@ const ChatScreen = () => {
          flatListRef.current?.scrollToEnd({ animated: true });
       }, 300);
     });
+
+    // Mark as read
+    if (user) markChatAsRead(conversationId, user.id).catch(console.error);
+
     return () => unsubscribe();
-  }, [conversationId]);
+  }, [conversationId, user]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !user) return;
@@ -52,7 +55,7 @@ const ChatScreen = () => {
     setInputText('');
 
     try {
-      await sendMessage(conversationId, user.uid, txt);
+      await sendMessage(conversationId, user.id, txt, '');
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -96,8 +99,8 @@ const ChatScreen = () => {
           renderItem={({ item }) => (
             <ChatBubble
               text={item.text}
-              time={item.time}
-              isOwn={user ? item.senderId === user.uid : false}
+              time={new Date(item.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+              isOwn={user ? item.senderId === user.id : false}
             />
           )}
           contentContainerStyle={styles.messagesList}

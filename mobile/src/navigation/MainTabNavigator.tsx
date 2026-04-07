@@ -118,16 +118,6 @@ const MainTabNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
-          tabBarBadge: 3,
-          tabBarBadgeStyle: {
-            backgroundColor: Colors.primary,
-            color: Colors.textInverse,
-            fontSize: 10,
-            fontWeight: '700',
-            minWidth: 18,
-            height: 18,
-            lineHeight: 18,
-          },
         }}
       />
       <Tab.Screen

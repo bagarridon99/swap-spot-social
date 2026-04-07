@@ -1,82 +1,138 @@
 /**
- * Product Service
- * Handles Firestore operations for products.
+ * Product Service — Supabase
  */
+import { supabase } from './supabase';
 
-import { db } from './firebase';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  query, 
-  where, 
-  doc, 
-  getDoc 
-} from 'firebase/firestore';
-import { Product } from '../types';
+export interface SupabaseProduct {
+  id?: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  condition: string;
+  wantsInReturn: string;
+  acceptableItems: string[];
+  location: string;
+  region: string;
+  userId: string;
+  userName?: string;
+  userInitials?: string;
+  boosted?: boolean;
+  createdAt?: string;
+}
 
-const PRODUCTS_COLLECTION = 'products';
+const mapProduct = (row: any): SupabaseProduct => ({
+  id: row.id,
+  title: row.title,
+  description: row.description,
+  imageUrl: row.image_url || '',
+  category: row.category,
+  condition: row.condition,
+  wantsInReturn: row.wants_in_return || '',
+  acceptableItems: row.acceptable_items || [],
+  location: row.location || '',
+  region: row.region || '',
+  userId: row.user_id,
+  userName: row.user_name || '',
+  userInitials: row.user_initials || '',
+  boosted: row.boosted || false,
+  createdAt: row.created_at,
+});
 
-export const getProducts = async (category?: string): Promise<Product[]> => {
-  const productsRef = collection(db, PRODUCTS_COLLECTION);
-  let q = query(productsRef);
-  
+export const getProducts = async (category?: string): Promise<SupabaseProduct[]> => {
+  let query = supabase.from('products').select('*').order('created_at', { ascending: false });
+
   if (category && category !== 'Todo') {
-    q = query(productsRef, where('category', '==', category));
+    query = query.eq('category', category);
   }
 
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as Product[];
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(mapProduct);
 };
 
-export const getProductById = async (id: string): Promise<Product | null> => {
-  const docRef = doc(db, PRODUCTS_COLLECTION, id);
-  const docSnap = await getDoc(docRef);
-  
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as Product;
-  }
-  return null;
+export const getProductById = async (id: string): Promise<SupabaseProduct | null> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+  return mapProduct(data);
 };
 
-export const searchProducts = async (searchQuery: string): Promise<Product[]> => {
-  // Free text search in Firestore requires third party but we can simulate a naive locally
+export const searchProducts = async (searchQuery: string): Promise<SupabaseProduct[]> => {
   const products = await getProducts();
-  const lowerQuery = searchQuery.toLowerCase();
-  
+  const q = searchQuery.toLowerCase();
   return products.filter(
     (p) =>
-      p.title.toLowerCase().includes(lowerQuery) ||
-      p.description.toLowerCase().includes(lowerQuery) ||
-      p.category.toLowerCase().includes(lowerQuery)
+      p.title.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q)
   );
 };
 
-export const createProduct = async (
-  productData: Omit<Product, 'id' | 'createdAt' | 'timeAgo' | 'views' | 'images'>,
-  images: string[]
-): Promise<string> => {
-  // images here are already uploaded URLs (or handled elsewhere for now)
-  const fullProductData = {
-    ...productData,
-    images,
-    createdAt: new Date().toISOString(),
-    timeAgo: 'Justo ahora',
-    views: 0
-  };
+export const createProduct = async (product: {
+  title: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  condition: string;
+  wantsInReturn: string;
+  acceptableItems: string[];
+  location: string;
+  region: string;
+  userId: string;
+  userName: string;
+  userInitials: string;
+}): Promise<string> => {
+  const { data, error } = await supabase.from('products').insert({
+    title: product.title,
+    description: product.description,
+    image_url: product.imageUrl,
+    category: product.category,
+    condition: product.condition,
+    wants_in_return: product.wantsInReturn,
+    acceptable_items: product.acceptableItems,
+    location: product.location,
+    region: product.region,
+    user_id: product.userId,
+    user_name: product.userName,
+    user_initials: product.userInitials,
+  }).select('id').single();
 
-  const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), fullProductData);
-  return docRef.id;
+  if (error) throw error;
+  return data.id;
 };
 
-export const getUserProducts = async (userId: string): Promise<Product[]> => {
-  const q = query(collection(db, PRODUCTS_COLLECTION), where('user.id', '==', userId));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as Product[];
+export const getUserProducts = async (userId: string): Promise<SupabaseProduct[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapProduct);
+};
+
+export const deleteProduct = async (productId: string): Promise<void> => {
+  const { error } = await supabase.from('products').delete().eq('id', productId);
+  if (error) throw error;
+};
+
+export const subscribeProducts = (onUpdate: (products: SupabaseProduct[]) => void) => {
+  // Initial fetch
+  getProducts().then(onUpdate).catch(console.error);
+
+  // Real-time updates
+  const channel = supabase
+    .channel('products-mobile')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+      getProducts().then(onUpdate).catch(console.error);
+    })
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
 };

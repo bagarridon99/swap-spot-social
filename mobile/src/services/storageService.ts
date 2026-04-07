@@ -1,19 +1,32 @@
 /**
- * Storage Service
- * Handles Firebase Storage operations for image uploads.
- * Currently uses mock implementation for development.
+ * Storage Service — Supabase Storage
  */
-
-// import { storage } from './firebase';
-// import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { supabase } from './supabase';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 export const uploadImage = async (
-  _uri: string,
-  _path: string
+  uri: string,
+  path: string
 ): Promise<string> => {
-  // Mock: simulate upload delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  return `https://firebasestorage.example.com/${_path}`;
+  // Read file as base64
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const filePath = `${path}/${Date.now()}.jpg`;
+
+  const { error } = await supabase.storage
+    .from('products')
+    .upload(filePath, decode(base64), {
+      contentType: 'image/jpeg',
+      upsert: false,
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+  return data.publicUrl;
 };
 
 export const uploadMultipleImages = async (

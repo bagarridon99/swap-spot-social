@@ -1,31 +1,17 @@
 /**
- * Auth Service
- * Handles Firebase Authentication operations.
+ * Auth Service — Supabase
  */
-
-import { auth, db } from './firebase';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendEmailVerification,
-  updateProfile
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { UserProfile } from '../types';
+import { supabase } from './supabase';
 
 export const signInWithEmail = async (email: string, password: string) => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  
-  if (!userCredential.user.emailVerified) {
-    await firebaseSignOut(auth);
-    throw new Error('Por favor, verifica tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada o SPAM.');
-  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
 
+  const user = data.user;
   return {
-    uid: userCredential.user.uid,
-    email: userCredential.user.email,
-    displayName: userCredential.user.displayName || email.split('@')[0],
+    id: user.id,
+    email: user.email || email,
+    displayName: user.user_metadata?.display_name || email.split('@')[0],
   };
 };
 
@@ -34,46 +20,38 @@ export const registerWithEmail = async (
   password: string,
   userData: { name: string; region: string }
 ) => {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  
-  // Send email verification
-  await sendEmailVerification(userCredential.user);
-  
-  // Set the display name
-  await updateProfile(userCredential.user, {
-    displayName: userData.name
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { display_name: userData.name },
+    },
   });
 
-  // Create initial user document in Firestore
-  const initialProfile: UserProfile = {
-    id: userCredential.user.uid,
-    name: userData.name,
-    initials: userData.name.substring(0, 2).toUpperCase(),
-    email: email,
-    location: 'Sede / General', // Can be refined later
+  if (error) throw new Error(error.message);
+  const user = data.user;
+  if (!user) throw new Error('Error al crear la cuenta');
+
+  // The profiles trigger in Supabase auto-creates a row,
+  // but we update it with region info
+  await supabase.from('profiles').update({
     region: userData.region,
-    rating: 0,
-    totalReviews: 0,
-    totalSwaps: 0,
-    memberSince: new Date().getFullYear().toString(),
-    bio: '¡Nuevo miembro en PermutApp!',
-    verified: false, // Wait until they verify email, but by default false initially
-    responseRate: 100,
-    responseTime: '< 1 hora'
-  };
-
-  await setDoc(doc(db, 'users', userCredential.user.uid), initialProfile);
-
-  // Sign out because we require verification
-  await firebaseSignOut(auth);
+    location: userData.region, // Default location to region
+  }).eq('id', user.id);
 
   return {
-    uid: userCredential.user.uid,
-    email: userCredential.user.email,
+    id: user.id,
+    email: user.email || email,
     displayName: userData.name,
   };
 };
 
 export const signOut = async () => {
-  await firebaseSignOut(auth);
+  const { error } = await supabase.auth.signOut();
+  if (error) throw new Error(error.message);
+};
+
+export const getCurrentSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
 };

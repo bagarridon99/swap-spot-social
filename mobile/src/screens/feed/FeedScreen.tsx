@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   StatusBar,
   RefreshControl,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -15,7 +14,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedStackParamList } from '../../navigation/types';
 import { Product } from '../../types';
-import { getProducts } from '../../services/productService';
+import { getProducts, SupabaseProduct } from '../../services/productService';
+import { fetchSavedIds, toggleSavedItem } from '../../services/savedItemsService';
+import { useAuth } from '../../context/AuthContext';
 import ProductCard from '../../components/molecules/ProductCard';
 import SearchBar from '../../components/molecules/SearchBar';
 import CategoryFilter from '../../components/organisms/CategoryFilter';
@@ -28,9 +29,28 @@ type FeedNavProp = NativeStackNavigationProp<FeedStackParamList, 'FeedHome'>;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.base * 3) / 2;
 
+const mapToProduct = (p: SupabaseProduct): Product => ({
+  id: p.id!,
+  imageUrl: p.imageUrl,
+  title: p.title,
+  description: p.description,
+  wantsInReturn: p.wantsInReturn,
+  acceptableItems: p.acceptableItems || [],
+  condition: p.condition,
+  category: p.category,
+  createdAt: p.createdAt || '',
+  userId: p.userId,
+  userName: p.userName || 'Usuario',
+  userInitials: p.userInitials || 'US',
+  location: p.location,
+  region: p.region,
+  boosted: p.boosted,
+});
+
 const FeedScreen = () => {
   const navigation = useNavigation<FeedNavProp>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todo');
@@ -40,10 +60,10 @@ const FeedScreen = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProductsData = useCallback(async () => {
     try {
       const data = await getProducts();
-      setProducts(data);
+      setProducts(data.map(mapToProduct));
     } catch (error) {
       console.error(error);
     } finally {
@@ -51,9 +71,16 @@ const FeedScreen = () => {
     }
   }, []);
 
-  React.useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // Load products
+  useEffect(() => {
+    fetchProductsData();
+  }, [fetchProductsData]);
+
+  // Load saved items from Supabase
+  useEffect(() => {
+    if (!user) return;
+    fetchSavedIds(user.id).then(setSavedItems).catch(console.error);
+  }, [user]);
 
   const filteredProducts = products.filter((p) => {
     const matchesCategory = activeCategory === 'Todo' || p.category === activeCategory;
@@ -66,17 +93,37 @@ const FeedScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchProducts();
+    await fetchProductsData();
+    if (user) {
+      const ids = await fetchSavedIds(user.id);
+      setSavedItems(ids);
+    }
     setRefreshing(false);
-  }, [fetchProducts]);
+  }, [fetchProductsData, user]);
 
-  const toggleSave = (id: string) => {
+  const handleToggleSave = async (id: string) => {
+    if (!user) return;
+    const currentlySaved = savedItems.has(id);
+
+    // Optimistic update
     setSavedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
+      if (currentlySaved) next.delete(id);
       else next.add(id);
       return next;
     });
+
+    try {
+      await toggleSavedItem(user.id, id, currentlySaved);
+    } catch {
+      // Revert
+      setSavedItems((prev) => {
+        const next = new Set(prev);
+        if (currentlySaved) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
   };
 
   const renderProduct = useCallback(
@@ -85,7 +132,7 @@ const FeedScreen = () => {
         product={item}
         width={CARD_WIDTH}
         saved={savedItems.has(item.id)}
-        onToggleSave={() => toggleSave(item.id)}
+        onToggleSave={() => handleToggleSave(item.id)}
         onPress={() => navigation.navigate('ProductDetail', { product: item })}
       />
     ),
@@ -94,7 +141,6 @@ const FeedScreen = () => {
 
   const ListHeader = () => (
     <View style={styles.header}>
-      {/* App title row */}
       <View style={styles.titleRow}>
         <View>
           <Text style={styles.appTitle}>PermutApp</Text>
@@ -103,22 +149,15 @@ const FeedScreen = () => {
         <View style={styles.headerIcons}>
           <View style={[styles.iconButton, Shadow.sm]}>
             <Ionicons name="notifications-outline" size={22} color={Colors.text} />
-            <View style={styles.notifDot} />
           </View>
         </View>
       </View>
-
-      {/* Search */}
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Buscar artículos para permutar..."
       />
-
-      {/* Categories */}
       <CategoryFilter active={activeCategory} onSelect={setActiveCategory} />
-
-      {/* Results count */}
       <Text style={styles.resultsText}>
         {filteredProducts.length} artículo{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
       </Text>
@@ -203,17 +242,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     position: 'relative',
-  },
-  notifDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
-    borderWidth: 1.5,
-    borderColor: Colors.card,
   },
   resultsText: {
     fontSize: FontSize.sm,

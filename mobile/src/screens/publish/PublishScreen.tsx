@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { updateProfile } from 'firebase/auth'; // just in case
 import CustomButton from '../../components/atoms/CustomButton';
 import CustomInput from '../../components/atoms/CustomInput';
 import Badge from '../../components/atoms/Badge';
@@ -26,8 +25,7 @@ import { chileanRegions } from '../../data/chileanLocations';
 import { PRODUCT_CONDITIONS } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { createProduct } from '../../services/productService';
-import { storage } from '../../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadImage } from '../../services/storageService';
 import * as ImagePicker from 'expo-image-picker';
 
 const PublishScreen = () => {
@@ -121,50 +119,34 @@ const PublishScreen = () => {
     setIsSubmitting(true);
 
     try {
-      let imageUrls: string[] = [];
+      let mainImageUrl = '';
       try {
         if (images.length > 0) {
-          imageUrls = await Promise.all(
-            images.map(async (uri, index) => {
-              const response = await fetch(uri);
-              const blob = await response.blob();
-              const storageRef = ref(storage, `products/${user.uid}/${Date.now()}_${index}.jpg`);
-              await uploadBytes(storageRef, blob);
-              return await getDownloadURL(storageRef);
-            })
-          );
+          mainImageUrl = await uploadImage(images[0], `products/${user.id}`);
         } else {
-          imageUrls = [`https://picsum.photos/seed/${Date.now()}/600/600`];
+          mainImageUrl = `https://picsum.photos/seed/${Date.now()}/600/600`;
         }
       } catch (storageError) {
-        console.warn("Storage exception", storageError);
-        imageUrls = [`https://picsum.photos/seed/${Date.now()}/600/600`];
+        console.warn('Storage upload failed, using placeholder', storageError);
+        mainImageUrl = `https://picsum.photos/seed/${Date.now()}/600/600`;
       }
 
-      // Save product to Firestore
+      const initials = (user.displayName || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
       await createProduct({
         title,
         description,
+        imageUrl: mainImageUrl,
         category,
-        condition: condition as any,
+        condition: condition,
         wantsInReturn,
         acceptableItems,
-        user: {
-          id: user.uid,
-          name: user.displayName || 'Usuario',
-          initials: (user.displayName || 'U').substring(0, 2).toUpperCase(),
-          location: 'Santiago',
-          region: region || 'Región Metropolitana',
-          rating: 5,
-          totalReviews: 0,
-          totalSwaps: 0,
-          memberSince: '2026',
-          bio: 'Usuario nuevo',
-          verified: true,
-          responseRate: 100,
-          responseTime: '1 hora'
-        }
-      }, imageUrls);
+        location: region || 'Santiago',
+        region: region || 'Región Metropolitana',
+        userId: user.id,
+        userName: user.displayName || 'Usuario',
+        userInitials: initials,
+      });
 
       setIsSubmitting(false);
 

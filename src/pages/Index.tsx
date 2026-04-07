@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import CategoryFilter from "@/components/CategoryFilter";
-import ProductDetail from "@/components/ProductDetail";
+import ProductDetailModal from "@/components/ProductDetailModal";
+import ProductFeed from "@/components/ProductFeed";
 import PublishModal from "@/components/PublishModal";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import ChatPanel from "@/components/ChatPanel";
@@ -17,194 +18,104 @@ import DiscoverMode from "@/components/DiscoverMode";
 import TradeHistory from "@/components/TradeHistory";
 import MapExplorer from "@/components/MapExplorer";
 import TradeEvents from "@/components/TradeEvents";
-import SponsoredCard, { sponsoredAds } from "@/components/SponsoredCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeProducts, type FirestoreProduct, subscribeProposals, type Proposal } from "@/lib/database";
-import { ArrowLeftRight, TrendingUp, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { useProposals } from "@/hooks/useProposals";
+import { useSavedItems } from "@/hooks/useSavedItems";
+import { usePanelManager } from "@/hooks/usePanelManager";
+import { deleteProduct, type FirestoreProduct } from "@/lib/database";
+import { ArrowLeftRight, Users, Search, Shield, MapPin, Crown, Compass, History, Map, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-type Panel = "notifications" | "chat" | "publish" | "saved" | "pricing" | "settings" | "discover" | "history" | "map" | "events" | null;
+import type { Panel } from "@/hooks/usePanelManager";
 
 const Index = () => {
   const { user } = useAuth();
-  const [products, setProducts] = useState<FirestoreProduct[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<FirestoreProduct | null>(null);
-  const [activePanel, setActivePanel] = useState<Panel>(null);
-  const [proposalProduct, setProposalProduct] = useState<FirestoreProduct | null>(null);
-  const [boostProduct, setBoostProduct] = useState<FirestoreProduct | null>(null);
+  const { activePanel, openPanel, closePanel } = usePanelManager();
+
+  // Filters
   const [activeCategory, setActiveCategory] = useState("Todo");
   const [regionFilter, setRegionFilter] = useState("all");
   const [comunaFilter, setComunaFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [mobileSearch, setMobileSearch] = useState("");
+
+  // Products
+  const { products, sortedProducts, loading: productsLoading } = useProducts({
+    activeCategory,
+    regionFilter,
+    comunaFilter,
+    searchQuery,
+    mobileSearch,
+  });
+
+  // Proposals
+  const { incomingProposals, pendingCount, loading: notifLoading } = useProposals(user?.id);
+
+  // Saved items (persisted to localStorage)
+  const { savedIds, toggleSaved, savedProducts } = useSavedItems(products);
+
+  // Product detail & proposal flow
+  const [selectedProduct, setSelectedProduct] = useState<FirestoreProduct | null>(null);
+  const [proposalProduct, setProposalProduct] = useState<FirestoreProduct | null>(null);
+  const [boostProduct, setBoostProduct] = useState<FirestoreProduct | null>(null);
+
+  // Dark mode
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("truequeya-dark") === "1";
     }
     return false;
   });
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [notifLoading, setNotifLoading] = useState(true);
-  const prevProposalsLen = useRef<number>(0);
-
-  // Subscribe to Firestore products in real-time
-  useEffect(() => {
-    const unsub = subscribeProducts(setProducts);
-    return unsub;
-  }, []);
-
-  // Subscribe to proposals for global notification badge & toast
-  useEffect(() => {
-    if (!user) return;
-    const unsub = subscribeProposals(user.id, (data) => {
-      setProposals(data);
-      setNotifLoading(false);
-      if (prevProposalsLen.current > 0 && data.length > prevProposalsLen.current) {
-        toast.info("¡Tienes una nueva propuesta de trueque pendiente!");
-      }
-      prevProposalsLen.current = data.length;
-    });
-    return unsub;
-  }, [user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("truequeya-dark", darkMode ? "1" : "0");
   }, [darkMode]);
 
-  const toggleSaved = (id: string) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
+  // Derived
   const myProducts = useMemo(() => {
     return products.filter((p) => p.userId === user?.id);
   }, [products, user]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      if (activeCategory !== "Todo" && p.category !== activeCategory) return false;
-      if (regionFilter !== "all" && p.region !== regionFilter) return false;
-      if (comunaFilter !== "all" && p.location !== comunaFilter) return false;
-      const q = (searchQuery || mobileSearch).toLowerCase();
-      if (q && !p.title.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q) && !p.wantsInReturn.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [products, activeCategory, regionFilter, comunaFilter, searchQuery, mobileSearch]);
-
-  const sortedProducts = useMemo(() => {
-    return [...filteredProducts].sort((a, b) => {
-      if (a.boosted && !b.boosted) return -1;
-      if (!a.boosted && b.boosted) return 1;
-      return 0;
-    });
-  }, [filteredProducts]);
-
-  const savedProducts = products.filter((p) => savedIds.has(p.id!));
 
   const handlePropose = (product: FirestoreProduct) => {
     setSelectedProduct(null);
     setProposalProduct(product);
   };
 
-  const renderFeedItems = () => {
-    const items: JSX.Element[] = [];
-    let adIndex = 0;
+  const handleDeleteProduct = async (product: FirestoreProduct) => {
+    if (!product.id) return;
+    if (!window.confirm(`¿Eliminar "${product.title}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteProduct(product.id);
+      setSelectedProduct(null);
+      toast.success("Publicación eliminada");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Error al eliminar la publicación");
+    }
+  };
 
-    sortedProducts.forEach((product, i) => {
-      items.push(
-        <div
-          key={`product-${product.id}`}
-          className="animate-fade-in"
-          style={{ animationDelay: `${i * 80}ms` }}
-        >
-          {/* Inline product card for Firestore products */}
-          <div
-            onClick={() => setSelectedProduct(product)}
-            className="bg-card rounded-2xl overflow-hidden border hover:shadow-lg transition-all cursor-pointer group"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden">
-              <img
-                src={product.imageUrl}
-                alt={product.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute top-3 left-3 flex gap-1.5">
-                <Badge variant="secondary" className="rounded-full text-[10px] bg-card/80 backdrop-blur-sm gap-1">
-                  <ArrowLeftRight className="h-3 w-3" /> Trueque
-                </Badge>
-                <Badge variant="secondary" className="rounded-full text-[10px] bg-card/80 backdrop-blur-sm">
-                  {product.condition}
-                </Badge>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleSaved(product.id!); }}
-                className={`absolute top-3 right-3 p-1.5 rounded-full transition-all ${
-                  savedIds.has(product.id!) ? "bg-primary text-primary-foreground" : "bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-primary"
-                }`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill={savedIds.has(product.id!) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="font-display font-semibold text-foreground line-clamp-1">{product.title}</h3>
-              <div className="flex items-center gap-1.5 text-xs text-primary">
-                <ArrowLeftRight className="h-3 w-3" />
-                <span>Busca: {product.wantsInReturn}</span>
-              </div>
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-[9px] bg-secondary font-semibold">{product.userInitials}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground">{product.userName}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {product.location}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
-      if ((i + 1) % 3 === 0 && adIndex < sponsoredAds.length) {
-        const ad = sponsoredAds[adIndex];
-        items.push(
-          <div key={`ad-${ad.id}`} className="animate-fade-in" style={{ animationDelay: `${(i + 1) * 80}ms` }}>
-            <SponsoredCard ad={ad} />
-          </div>
-        );
-        adIndex++;
-      }
-    });
-
-    return items;
+  const clearFilters = () => {
+    setActiveCategory("Todo");
+    setRegionFilter("all");
+    setComunaFilter("all");
+    setSearchQuery("");
+    setMobileSearch("");
   };
 
   return (
     <div className="min-h-screen bg-background">
       <MarketplaceHeader
-        onPublish={() => setActivePanel("publish")}
-        onNotifications={() => setActivePanel("notifications")}
-        onChat={() => setActivePanel("chat")}
-        onSaved={() => setActivePanel("saved")}
-        onPricing={() => setActivePanel("pricing")}
-        onSettings={() => setActivePanel("settings")}
+        onPublish={() => openPanel("publish")}
+        onNotifications={() => openPanel("notifications")}
+        onChat={() => openPanel("chat")}
+        onSaved={() => openPanel("saved")}
+        onPricing={() => openPanel("pricing")}
+        onSettings={() => openPanel("settings")}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        unreadNotifications={proposals.filter(p => p.status === "pending").length}
+        unreadNotifications={pendingCount}
       />
 
       {/* Hero */}
@@ -242,7 +153,7 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 text-primary" />
-              <span><strong className="text-foreground">{new Set(products.map(p => p.region)).size}</strong> regiones</span>
+              <span><strong className="text-foreground">{new Set(products.map((p) => p.region)).size}</strong> regiones</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Shield className="h-4 w-4 text-primary" />
@@ -252,7 +163,7 @@ const Index = () => {
 
           <div
             className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/20 cursor-pointer hover:border-amber-500/40 transition-colors"
-            onClick={() => setActivePanel("pricing")}
+            onClick={() => openPanel("pricing")}
           >
             <Crown className="h-4 w-4 text-amber-500" />
             <span className="text-sm text-foreground">
@@ -274,7 +185,7 @@ const Index = () => {
           ].map((item) => (
             <button
               key={item.label}
-              onClick={() => setActivePanel(item.panel)}
+              onClick={() => openPanel(item.panel)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-card border hover:bg-secondary/50 transition-colors whitespace-nowrap"
             >
               <item.icon className={`h-4 w-4 ${item.color}`} />
@@ -302,7 +213,24 @@ const Index = () => {
             <RegionFilter value={regionFilter} onChange={setRegionFilter} comunaValue={comunaFilter} onComunaChange={setComunaFilter} />
           </div>
 
-          {sortedProducts.length === 0 ? (
+          {productsLoading ? (
+            // Skeleton loading state
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl overflow-hidden border animate-pulse">
+                  <div className="aspect-[4/3] bg-muted" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                    <div className="flex justify-between">
+                      <div className="h-6 w-6 bg-muted rounded-full" />
+                      <div className="h-3 bg-muted rounded w-20" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : sortedProducts.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <Search className="h-12 w-12 mx-auto text-muted-foreground/30" />
               <p className="text-muted-foreground">
@@ -312,19 +240,22 @@ const Index = () => {
                 {products.length === 0 ? "¡Sé el primero en publicar!" : "Prueba con otra categoría o región"}
               </p>
               {products.length === 0 ? (
-                <Button className="rounded-full mt-2" onClick={() => setActivePanel("publish")}>
+                <Button className="rounded-full mt-2" onClick={() => openPanel("publish")}>
                   Publicar artículo
                 </Button>
               ) : (
-                <Button variant="outline" className="rounded-full mt-2" onClick={() => { setActiveCategory("Todo"); setRegionFilter("all"); setComunaFilter("all"); setSearchQuery(""); setMobileSearch(""); }}>
+                <Button variant="outline" className="rounded-full mt-2" onClick={clearFilters}>
                   Limpiar filtros
                 </Button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {renderFeedItems()}
-            </div>
+            <ProductFeed
+              products={sortedProducts}
+              savedIds={savedIds}
+              onToggleSave={toggleSaved}
+              onProductClick={setSelectedProduct}
+            />
           )}
         </div>
       </main>
@@ -336,84 +267,44 @@ const Index = () => {
       <Button
         size="icon"
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden z-40"
-        onClick={() => setActivePanel("publish")}
+        onClick={() => openPanel("publish")}
+        aria-label="Publicar artículo"
       >
         <ArrowLeftRight className="h-6 w-6" />
       </Button>
 
       {/* Modals & Panels */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8">
-          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
-          <div className="relative w-full max-w-2xl max-h-[90vh] bg-card rounded-2xl overflow-y-auto shadow-2xl animate-fade-in">
-            <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-card/90 backdrop-blur-md">
-              <Badge variant="secondary" className="rounded-full">{selectedProduct.category} · {selectedProduct.condition}</Badge>
-              <button onClick={() => setSelectedProduct(null)} className="p-1 rounded-full hover:bg-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="grid md:grid-cols-2 gap-0">
-              <div className="aspect-square">
-                <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-6 space-y-4">
-                <h2 className="font-display text-xl font-bold text-foreground">{selectedProduct.title}</h2>
-                <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
-                <div className="p-3 rounded-xl bg-secondary/50 border space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <ArrowLeftRight className="h-4 w-4 text-primary" />
-                    Busca: {selectedProduct.wantsInReturn}
-                  </div>
-                  {selectedProduct.acceptableItems.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedProduct.acceptableItems.map((item, i) => (
-                        <Badge key={i} variant="outline" className="rounded-full text-xs">{item}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl border">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">{selectedProduct.userInitials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{selectedProduct.userName}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{selectedProduct.location}</p>
-                  </div>
-                </div>
-                {selectedProduct.userId !== user?.id && (
-                  <Button className="w-full rounded-full gap-2" onClick={() => handlePropose(selectedProduct)}>
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Proponer trueque
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductDetailModal
+          product={selectedProduct}
+          isOwner={selectedProduct.userId === user?.id}
+          onClose={() => setSelectedProduct(null)}
+          onPropose={handlePropose}
+          onDelete={handleDeleteProduct}
+        />
       )}
 
-      {activePanel === "publish" && <PublishModal onClose={() => setActivePanel(null)} />}
+      {activePanel === "publish" && <PublishModal onClose={closePanel} />}
       {activePanel === "notifications" && (
-        <NotificationsPanel 
-          onClose={() => setActivePanel(null)} 
-          onOpenChat={() => setActivePanel("chat")} 
-          proposals={proposals}
+        <NotificationsPanel
+          onClose={closePanel}
+          onOpenChat={() => openPanel("chat")}
+          proposals={incomingProposals}
           loading={notifLoading}
         />
       )}
-      {activePanel === "chat" && <ChatPanel onClose={() => setActivePanel(null)} />}
-      {activePanel === "pricing" && <PricingModal onClose={() => setActivePanel(null)} />}
+      {activePanel === "chat" && <ChatPanel onClose={closePanel} />}
+      {activePanel === "pricing" && <PricingModal onClose={closePanel} />}
       {activePanel === "settings" && (
         <SettingsPanel
-          onClose={() => setActivePanel(null)}
+          onClose={closePanel}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
         />
       )}
       {activePanel === "saved" && (
         <SavedItems
-          products={savedProducts.map(p => ({
+          products={savedProducts.map((p) => ({
             id: Number(p.id) || 0,
             image: p.imageUrl,
             title: p.title,
@@ -423,12 +314,12 @@ const Index = () => {
             condition: p.condition,
             category: p.category,
             timeAgo: "",
-            user: { id: p.userId, name: p.userName, initials: p.userInitials, location: p.location, region: p.region, rating: 0, totalReviews: 0, totalSwaps: 0, memberSince: "", bio: "", verified: false, responseRate: 0, responseTime: "" },
+            user: { id: p.userId, name: p.userName || "", initials: p.userInitials || "", location: p.location, region: p.region, rating: 0, totalReviews: 0, totalSwaps: 0, memberSince: "", bio: "", verified: false, responseRate: 0, responseTime: "" },
           }))}
-          onClose={() => setActivePanel(null)}
+          onClose={closePanel}
           onProductClick={(product) => {
-            setActivePanel(null);
-            const fp = savedProducts.find(p => p.userName === product.user.name && p.title === product.title);
+            closePanel();
+            const fp = savedProducts.find((p) => p.userName === product.user.name && p.title === product.title);
             if (fp) setSelectedProduct(fp);
           }}
         />
@@ -436,33 +327,37 @@ const Index = () => {
 
       {activePanel === "discover" && products.length > 0 && (
         <DiscoverMode
-          onClose={() => setActivePanel(null)}
+          products={products}
+          onClose={closePanel}
           onProductClick={(product) => {
-            setActivePanel(null);
-            const fp = products.find(p => p.id === product.id?.toString() || p.title === product.title);
-            if (fp) setSelectedProduct(fp);
+            closePanel();
+            setSelectedProduct(product);
           }}
-          savedIds={new Set(Array.from(savedIds).map(Number).filter(n => !isNaN(n)))}
-          onToggleSave={(numId) => { toggleSaved(String(numId)); }}
+          savedIds={savedIds}
+          onToggleSave={toggleSaved}
         />
       )}
-      {activePanel === "history" && <TradeHistory onClose={() => setActivePanel(null)} />}
+      {activePanel === "history" && (
+        <TradeHistory
+          onClose={closePanel}
+        />
+      )}
       {activePanel === "map" && (
         <MapExplorer
-          onClose={() => setActivePanel(null)}
+          products={products}
+          onClose={closePanel}
           onProductClick={(product) => {
-            setActivePanel(null);
-            const fp = products.find(p => p.title === product.title);
-            if (fp) setSelectedProduct(fp);
+            closePanel();
+            setSelectedProduct(product);
           }}
         />
       )}
-      {activePanel === "events" && <TradeEvents onClose={() => setActivePanel(null)} />}
+      {activePanel === "events" && <TradeEvents onClose={closePanel} />}
 
       {proposalProduct && (
         <TruequeProposal product={proposalProduct} myProducts={myProducts} onClose={() => setProposalProduct(null)} />
       )}
-      
+
       {boostProduct && (
         <BoostModal product={boostProduct} onClose={() => setBoostProduct(null)} />
       )}

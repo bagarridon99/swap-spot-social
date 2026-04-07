@@ -417,5 +417,172 @@ export const updateProposalStatus = async (
   proposalId: string,
   status: "accepted" | "rejected" | "cancelled"
 ) => {
-  await supabase.from("proposals").update({ status }).eq("id", proposalId);
+  const { error } = await supabase.from("proposals").update({ status }).eq("id", proposalId);
+  if (error) throw error;
+};
+
+// ─── Delete Product ────────────────────────────────────────────────────────────
+
+export const deleteProduct = async (productId: string) => {
+  // First delete the image from storage if needed
+  const { data: product } = await supabase
+    .from("products")
+    .select("image_url, user_id")
+    .eq("id", productId)
+    .single();
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId);
+
+  if (error) throw error;
+
+  // Try to clean up the storage file (best-effort, don't fail if it doesn't work)
+  if (product?.image_url) {
+    try {
+      const url = new URL(product.image_url);
+      const pathParts = url.pathname.split("/storage/v1/object/public/products/");
+      if (pathParts[1]) {
+        await supabase.storage.from("products").remove([decodeURIComponent(pathParts[1])]);
+      }
+    } catch {
+      // ignore storage cleanup errors
+    }
+  }
+};
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export interface Review {
+  id?: string;
+  reviewerId: string;
+  reviewedId: string;
+  proposalId?: string;
+  rating: number;
+  comment?: string;
+  createdAt?: string;
+  reviewerName?: string;
+}
+
+export const submitReview = async (review: {
+  reviewerId: string;
+  reviewedId: string;
+  proposalId: string;
+  rating: number;
+  comment?: string;
+}) => {
+  const { error } = await supabase.from("reviews").insert({
+    reviewer_id: review.reviewerId,
+    reviewed_id: review.reviewedId,
+    proposal_id: review.proposalId,
+    rating: review.rating,
+    comment: review.comment || null,
+  });
+  if (error) throw error;
+};
+
+export const fetchReviewsForUser = async (userId: string): Promise<Review[]> => {
+  const { data, error } = await supabase
+    .from("reviews")
+    .select(`
+      *,
+      reviewer:reviewer_id ( display_name )
+    `)
+    .eq("reviewed_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((d: any) => ({
+    id: d.id,
+    reviewerId: d.reviewer_id,
+    reviewedId: d.reviewed_id,
+    proposalId: d.proposal_id,
+    rating: d.rating,
+    comment: d.comment,
+    createdAt: d.created_at,
+    reviewerName: d.reviewer?.display_name || "Usuario",
+  }));
+};
+
+export const hasReviewedProposal = async (
+  reviewerId: string,
+  proposalId: string
+): Promise<boolean> => {
+  const { data } = await supabase
+    .from("reviews")
+    .select("id")
+    .eq("reviewer_id", reviewerId)
+    .eq("proposal_id", proposalId)
+    .maybeSingle();
+
+  return !!data;
+};
+
+// ─── Saved Items (Supabase) ───────────────────────────────────────────────────
+
+export const fetchSavedIds = async (userId: string): Promise<Set<string>> => {
+  const { data, error } = await supabase
+    .from("saved_items")
+    .select("product_id")
+    .eq("user_id", userId);
+
+  if (error || !data) return new Set();
+  return new Set(data.map((d: any) => d.product_id));
+};
+
+export const toggleSavedItem = async (
+  userId: string,
+  productId: string,
+  currentlySaved: boolean
+) => {
+  if (currentlySaved) {
+    const { error } = await supabase
+      .from("saved_items")
+      .delete()
+      .eq("user_id", userId)
+      .eq("product_id", productId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("saved_items")
+      .insert({ user_id: userId, product_id: productId });
+    if (error) throw error;
+  }
+};
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export interface ProfileUpdate {
+  displayName?: string;
+  location?: string;
+  region?: string;
+  avatarUrl?: string;
+}
+
+export const updateProfile = async (userId: string, updates: ProfileUpdate) => {
+  const payload: Record<string, any> = {};
+  if (updates.displayName !== undefined) payload.display_name = updates.displayName;
+  if (updates.location !== undefined) payload.location = updates.location;
+  if (updates.region !== undefined) payload.region = updates.region;
+  if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(payload)
+    .eq("id", userId);
+
+  if (error) throw error;
+};
+
+export const fetchProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (error) throw error;
+  return data;
 };

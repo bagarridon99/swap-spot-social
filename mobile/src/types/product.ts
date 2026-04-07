@@ -1,21 +1,19 @@
-import { UserProfile } from './user';
-
 export interface Product {
   id: string;
-  images: string[];
+  imageUrl: string;
   title: string;
   description: string;
   wantsInReturn: string;
   acceptableItems: string[];
-  condition: ProductCondition;
+  condition: string;
   category: string;
   createdAt: string;
-  timeAgo: string;
-  user: UserProfile;
-  saved?: boolean;
-  views?: number;
+  userId: string;
+  userName: string;
+  userInitials: string;
+  location: string;
+  region: string;
   boosted?: boolean;
-  premium?: boolean;
 }
 
 export type ProductCondition =

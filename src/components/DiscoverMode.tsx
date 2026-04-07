@@ -2,18 +2,18 @@ import { useState, useRef } from "react";
 import { X, Heart, RotateCcw, ArrowLeftRight, MapPin, Star, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { mockProducts } from "@/data/mockProducts";
-import type { Product } from "@/data/mockProducts";
+import type { FirestoreProduct } from "@/lib/database";
 import { toast } from "sonner";
 
 interface DiscoverModeProps {
+  products: FirestoreProduct[];
   onClose: () => void;
-  onProductClick: (product: Product) => void;
-  savedIds: Set<number>;
-  onToggleSave: (id: number) => void;
+  onProductClick: (product: FirestoreProduct) => void;
+  savedIds: Set<string>;
+  onToggleSave: (id: string) => void;
 }
 
-const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: DiscoverModeProps) => {
+const DiscoverMode = ({ products, onClose, onProductClick, savedIds, onToggleSave }: DiscoverModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<"left" | "right" | null>(null);
   const [history, setHistory] = useState<number[]>([]);
@@ -22,13 +22,12 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
   const [offsetX, setOffsetX] = useState(0);
   const [dragging, setDragging] = useState(false);
 
-  const products = mockProducts;
   const current = products[currentIndex];
 
   const swipe = (dir: "left" | "right") => {
     setDirection(dir);
     if (dir === "right" && current) {
-      onToggleSave(current.id);
+      onToggleSave(current.id!);
       toast.success("¡Guardado!");
     } else if (dir === "left") {
       toast("Descartado", { duration: 1000 });
@@ -91,7 +90,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
       {/* Header */}
       <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b">
         <div className="container flex items-center justify-between h-14">
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-secondary transition-colors" aria-label="Cerrar descubrir">
             <X className="h-5 w-5 text-foreground" />
           </button>
           <div className="flex items-center gap-2">
@@ -137,7 +136,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
           )}
 
           <div className="aspect-[3/4] relative">
-            <img src={current.image} alt={current.title} className="w-full h-full object-cover" />
+            <img src={current.imageUrl} alt={current.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-transparent to-transparent" />
 
             <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2">
@@ -155,11 +154,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
               <div className="flex items-center gap-2 pt-1">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-white/70" />
-                  <span className="text-xs text-white/70">{current.user.location}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  <span className="text-xs text-white/70">{current.user.rating}</span>
+                  <span className="text-xs text-white/70">{current.location}</span>
                 </div>
               </div>
 
@@ -178,6 +173,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
             size="icon"
             className="h-12 w-12 rounded-full border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
             onClick={() => swipe("left")}
+            aria-label="Descartar"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -187,6 +183,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
             className="h-10 w-10 rounded-full"
             onClick={undo}
             disabled={history.length === 0}
+            aria-label="Deshacer"
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -195,6 +192,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
             size="icon"
             className="h-10 w-10 rounded-full"
             onClick={() => onProductClick(current)}
+            aria-label="Ver detalle"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
@@ -202,6 +200,7 @@ const DiscoverMode = ({ onClose, onProductClick, savedIds, onToggleSave }: Disco
             size="icon"
             className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90"
             onClick={() => swipe("right")}
+            aria-label="Guardar"
           >
             <Heart className="h-6 w-6" />
           </Button>

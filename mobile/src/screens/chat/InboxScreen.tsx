@@ -12,8 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ChatStackParamList } from '../../navigation/types';
 import ConversationItem from '../../components/molecules/ConversationItem';
-import { Conversation } from '../../types';
-import { subscribeToConversations } from '../../services/chatService';
+import { subscribeToConversations, ChatConversation } from '../../services/chatService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/layout';
@@ -25,17 +24,37 @@ const InboxScreen = () => {
   const navigation = useNavigation<InboxNavProp>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [conversations, setConversations] = React.useState<ChatConversation[]>([]);
 
   React.useEffect(() => {
     if (!user) return;
-    const unsubscribe = subscribeToConversations(user.uid, (data) => {
-      setConversations(data);
-    });
+    const unsubscribe = subscribeToConversations(user.id, setConversations);
     return () => unsubscribe();
   }, [user]);
 
-  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  const totalUnread = conversations.reduce((sum, c) => user ? (c.unreadBy.includes(user.id) ? sum + 1 : sum) : sum, 0);
+
+  const getOtherName = (conv: ChatConversation) => {
+    if (!user) return 'Usuario';
+    const otherId = conv.participants.find((p) => p !== user.id) || '';
+    return conv.participantNames[otherId] || 'Usuario';
+  };
+
+  const getOtherInitials = (conv: ChatConversation) => {
+    if (!user) return 'US';
+    const otherId = conv.participants.find((p) => p !== user.id) || '';
+    return conv.participantInitials[otherId] || 'US';
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -56,28 +75,32 @@ const InboxScreen = () => {
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ConversationItem
-            id={item.id}
-            name={item.participant.name}
-            initials={item.participant.initials}
-            lastMessage={item.lastMessage}
-            time={item.timeAgo}
-            unread={item.unreadCount}
-            online={item.participant.online}
-            onPress={() =>
-              navigation.navigate('Chat', {
-                conversationId: item.id,
-                name: item.participant.name,
-                initials: item.participant.initials,
-                online: item.participant.online,
-              })
-            }
-          />
-        )}
-        ItemSeparatorComponent={() => (
-          <View style={styles.separator} />
-        )}
+        renderItem={({ item }) => {
+          const name = getOtherName(item);
+          const initials = getOtherInitials(item);
+          const isUnread = user ? item.unreadBy.includes(user.id) : false;
+
+          return (
+            <ConversationItem
+              id={item.id}
+              name={name}
+              initials={initials}
+              lastMessage={item.lastMessage}
+              time={getTimeAgo(item.lastMessageAt)}
+              unread={isUnread ? 1 : 0}
+              online={false}
+              onPress={() =>
+                navigation.navigate('Chat', {
+                  conversationId: item.id,
+                  name,
+                  initials,
+                  online: false,
+                })
+              }
+            />
+          );
+        }}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -94,64 +117,16 @@ const InboxScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    backgroundColor: Colors.card,
-  },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: FontWeight.medium,
-    marginTop: 2,
-  },
-  headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginLeft: 80,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.massive * 2,
-    gap: Spacing.md,
-  },
-  emptyTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text,
-  },
-  emptySubtitle: {
-    fontSize: FontSize.base,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xxl,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.base, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, backgroundColor: Colors.card },
+  title: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.text },
+  subtitle: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: FontWeight.medium, marginTop: 2 },
+  headerIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  listContent: { paddingBottom: 100 },
+  separator: { height: 1, backgroundColor: Colors.borderLight, marginLeft: 80 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.massive * 2, gap: Spacing.md },
+  emptyTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.text },
+  emptySubtitle: { fontSize: FontSize.base, color: Colors.textMuted, textAlign: 'center', paddingHorizontal: Spacing.xxl },
 });
 
 export default InboxScreen;

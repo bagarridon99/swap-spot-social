@@ -1,19 +1,17 @@
-import { X, MapPin, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { X, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { mockProducts } from "@/data/mockProducts";
-import type { Product } from "@/data/mockProducts";
+import type { FirestoreProduct } from "@/lib/database";
 import { comunaCoordinates } from "@/data/chileanLocations";
 import { MapContainer, TileLayer, Circle, Popup, useMap } from "react-leaflet";
 import { useState, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 
 interface MapExplorerProps {
+  products: FirestoreProduct[];
   onClose: () => void;
-  onProductClick: (product: Product) => void;
+  onProductClick: (product: FirestoreProduct) => void;
 }
 
-// Fix leaflet default marker icon issue
 const FixMapCenter = ({ center }: { center: [number, number] }) => {
   const map = useMap();
   useEffect(() => {
@@ -22,21 +20,23 @@ const FixMapCenter = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
-const MapExplorer = ({ onClose, onProductClick }: MapExplorerProps) => {
+const MapExplorer = ({ products, onClose, onProductClick }: MapExplorerProps) => {
   const [selectedCategory, setSelectedCategory] = useState("Todo");
-  const categories = ["Todo", "Ropa", "Fotografía", "Deportes", "Música", "Libros"];
+  
+  // Derive categories from actual products
+  const categories = ["Todo", ...new Set(products.map((p) => p.category))];
 
   const filtered = selectedCategory === "Todo"
-    ? mockProducts
-    : mockProducts.filter((p) => p.category === selectedCategory);
+    ? products
+    : products.filter((p) => p.category === selectedCategory);
 
   // Group products by location
   const locationGroups = filtered.reduce((acc, product) => {
-    const key = product.user.location;
+    const key = product.location;
     if (!acc[key]) acc[key] = [];
     acc[key].push(product);
     return acc;
-  }, {} as Record<string, Product[]>);
+  }, {} as Record<string, FirestoreProduct[]>);
 
   const defaultCenter: [number, number] = [-33.4489, -70.6693]; // Santiago
 
@@ -44,7 +44,7 @@ const MapExplorer = ({ onClose, onProductClick }: MapExplorerProps) => {
     <div className="fixed inset-0 z-50 bg-background">
       <div className="sticky top-0 z-[1000] bg-card/80 backdrop-blur-md border-b">
         <div className="container flex items-center justify-between h-14">
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-secondary transition-colors" aria-label="Cerrar mapa">
             <X className="h-5 w-5 text-foreground" />
           </button>
           <div className="flex items-center gap-2">
@@ -87,13 +87,12 @@ const MapExplorer = ({ onClose, onProductClick }: MapExplorerProps) => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {Object.entries(locationGroups).map(([location, products]) => {
+          {Object.entries(locationGroups).map(([location, locProducts]) => {
             const coords = comunaCoordinates[location];
             if (!coords) return null;
 
-            // Add randomized offset for "approximate" location
-            const jitterLat = (Math.sin(location.length * 2.7) * 0.005);
-            const jitterLng = (Math.cos(location.length * 3.1) * 0.005);
+            const jitterLat = Math.sin(location.length * 2.7) * 0.005;
+            const jitterLng = Math.cos(location.length * 3.1) * 0.005;
 
             return (
               <Circle
@@ -110,23 +109,25 @@ const MapExplorer = ({ onClose, onProductClick }: MapExplorerProps) => {
                 <Popup>
                   <div className="space-y-2 min-w-[200px]">
                     <p className="font-semibold text-sm">{location}</p>
-                    <p className="text-xs text-gray-500">{products.length} artículo{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""}</p>
+                    <p className="text-xs text-gray-500">
+                      {locProducts.length} artículo{locProducts.length > 1 ? "s" : ""} disponible{locProducts.length > 1 ? "s" : ""}
+                    </p>
                     <div className="space-y-1.5">
-                      {products.slice(0, 3).map((product) => (
+                      {locProducts.slice(0, 3).map((product) => (
                         <button
                           key={product.id}
                           onClick={() => onProductClick(product)}
                           className="w-full flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-left"
                         >
-                          <img src={product.image} alt={product.title} className="h-8 w-8 rounded object-cover" />
+                          <img src={product.imageUrl} alt={product.title} className="h-8 w-8 rounded object-cover" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{product.title}</p>
                             <p className="text-[10px] text-gray-400">{product.category}</p>
                           </div>
                         </button>
                       ))}
-                      {products.length > 3 && (
-                        <p className="text-[10px] text-gray-400 text-center">+{products.length - 3} más</p>
+                      {locProducts.length > 3 && (
+                        <p className="text-[10px] text-gray-400 text-center">+{locProducts.length - 3} más</p>
                       )}
                     </div>
                   </div>

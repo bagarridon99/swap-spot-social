@@ -29,8 +29,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onToggleSave,
   width,
 }) => {
-  const { images, title, wantsInReturn, condition, user, timeAgo, views, boosted, premium } = product;
+  const { imageUrl, title, wantsInReturn, condition, userName, userInitials, location, createdAt, boosted } = product;
   const cardWidth = width || (Dimensions.get('window').width - Spacing.base * 3) / 2;
+  const timeAgo = createdAt ? getTimeAgo(createdAt) : '';
 
   return (
     <TouchableOpacity
@@ -46,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Image */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: images[0] }}
+          source={{ uri: imageUrl }}
           style={[styles.image, { width: cardWidth, height: cardWidth }]}
           resizeMode="cover"
         />
@@ -94,9 +95,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          {premium && (
-            <Ionicons name="diamond" size={14} color={Colors.accent} />
-          )}
         </View>
 
         <View style={styles.wantsRow}>
@@ -108,20 +106,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         <View style={styles.footer}>
           <View style={styles.userInfo}>
-            <Avatar initials={user.initials} size="sm" />
-            <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
+            <Avatar initials={userInitials} size="sm" />
+            <Text style={styles.userName} numberOfLines={1}>{userName}</Text>
           </View>
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
-            <Text style={styles.locationText}>{user.location}</Text>
+            <Text style={styles.locationText}>{location}</Text>
           </View>
         </View>
 
         <View style={styles.metaRow}>
           <Text style={styles.metaText}>{timeAgo}</Text>
-          {views !== undefined && (
-            <Text style={styles.metaText}>{views} visitas</Text>
-          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -273,3 +268,13 @@ const styles = StyleSheet.create({
 });
 
 export default ProductCard;
+
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `Hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Hace ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `Hace ${days}d`;
+}

@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import * as authService from '../services/authService';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { supabase } from '../services/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthUser {
-  uid: string;
+  id: string;
   email: string;
   displayName: string;
 }
@@ -20,25 +21,50 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const sessionToUser = (session: Session | null): AuthUser | null => {
+  if (!session?.user) return null;
+  const u = session.user;
+  return {
+    id: u.id,
+    email: u.email || '',
+    displayName: u.user_metadata?.display_name || u.email?.split('@')[0] || 'Usuario',
+  };
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
+
+  // Listen for auth state changes (persisted session)
+  useEffect(() => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(sessionToUser(session));
+      setIsLoading(false);
+    });
+
+    // Subscribe to changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(sessionToUser(session));
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await authService.signInWithEmail(email, password);
-      setUser({
-        uid: result.uid,
-        email: result.email!,
-        displayName: result.displayName || email.split('@')[0],
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) throw authError;
+      setUser(sessionToUser(data.session));
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+      const msg = err.message || 'Error al iniciar sesión';
+      setError(msg);
       throw err;
     } finally {
       setIsLoading(false);
@@ -50,12 +76,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await authService.registerWithEmail(email, password, userData);
-        // Do NOT setUser here, to force login flow with verification
-        setError('¡Cuenta creada exitosamente! Por favor, revisa tu correo para verificarla antes de iniciar sesión.');
+        const { data, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: userData.name } },
+        });
+        if (authError) throw authError;
+
+        // Update profile with region
+        if (data.user) {
+          await supabase.from('profiles').update({
+            region: userData.region,
+          }).eq('id', data.user.id);
+        }
+
+        // If email confirmation is required, user won't have a session yet
+        if (data.session) {
+          setUser(sessionToUser(data.session));
+        } else {
+          setError('¡Cuenta creada! Revisa tu correo para verificar tu cuenta antes de iniciar sesión.');
+        }
       } catch (err: any) {
-        // If it's the success message, it will just show as an "error" banner (we reuse the error banner to show messages for now)
-        // Or we just throw the catch string.
         setError(err.message || 'Error al crear la cuenta');
         throw err;
       } finally {
@@ -68,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      await authService.signOut();
+      await supabase.auth.signOut();
       setUser(null);
     } catch (err: any) {
       setError(err.message || 'Error al cerrar sesión');
