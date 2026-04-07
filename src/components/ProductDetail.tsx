@@ -204,10 +204,10 @@ const ProductDetail = ({ product, onClose, onViewProfile, onPropose, onBoost, sa
                 <Button
                   variant="outline"
                   size="icon"
-                  className="rounded-full shrink-0"
+                  className="rounded-full shrink-0 h-10 w-10 transition-all transform hover:scale-110 active:scale-95"
                   onClick={(e) => { e.stopPropagation(); onToggleSave?.(); }}
                 >
-                  <Heart className={`h-4 w-4 ${saved ? "fill-accent text-accent" : ""}`} />
+                  <Heart className={`h-5 w-5 ${saved ? "fill-accent text-accent" : ""}`} />
                 </Button>
                 <Button variant="outline" size="icon" className="rounded-full shrink-0" onClick={() => toast.success("Link copiado al portapapeles")}>
                   <Share2 className="h-4 w-4" />

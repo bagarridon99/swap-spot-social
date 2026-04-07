@@ -11,6 +11,8 @@ export interface BaseProduct {
   wantsInReturn: string;
   acceptableItems: string[];
   imageUrl: string;
+  /** All image URLs (parsed from JSON array stored in image_url column) */
+  imageUrls: string[];
   region: string;
   location: string;
   userId: string;
@@ -60,6 +62,23 @@ export interface Proposal {
 // Keep the old name for backward compatibility during migration
 export interface FirestoreProduct extends BaseProduct {}
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Parse image_url column: supports JSON array string or plain URL (backward compat) */
+const parseImageUrls = (raw: string | null | undefined): string[] => {
+  if (!raw) return [];
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (Array.isArray(arr)) return arr.filter((u: any) => typeof u === "string" && u.length > 0);
+    } catch {
+      // fall through to plain URL
+    }
+  }
+  return [trimmed];
+};
+
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export const subscribeProducts = (
@@ -76,23 +95,27 @@ export const subscribeProducts = (
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      const formatted = data.map((d: any) => ({
-        id: d.id,
-        title: d.title,
-        description: d.description,
-        category: d.category,
-        condition: d.condition,
-        wantsInReturn: d.wants_in_return,
-        acceptableItems: d.acceptable_items,
-        imageUrl: d.image_url,
-        region: d.region,
-        location: d.location,
-        userId: d.user_id,
-        userName: d.profiles?.display_name || "Usuario",
-        userInitials: (d.profiles?.display_name || "US").substring(0, 2).toUpperCase(),
-        boosted: d.boosted,
-        createdAt: d.created_at,
-      }));
+      const formatted = data.map((d: any) => {
+        const urls = parseImageUrls(d.image_url);
+        return {
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          category: d.category,
+          condition: d.condition,
+          wantsInReturn: d.wants_in_return,
+          acceptableItems: d.acceptable_items,
+          imageUrl: urls[0] || "",
+          imageUrls: urls,
+          region: d.region,
+          location: d.location,
+          userId: d.user_id,
+          userName: d.profiles?.display_name || "Usuario",
+          userInitials: (d.profiles?.display_name || "US").substring(0, 2).toUpperCase(),
+          boosted: d.boosted,
+          createdAt: d.created_at,
+        };
+      });
       callback(formatted);
     }
   };
@@ -118,6 +141,12 @@ export const subscribeProducts = (
 export const addProduct = async (
   product: Omit<FirestoreProduct, "id" | "createdAt" | "userName" | "userInitials">
 ) => {
+  // Serialize image URLs as JSON array into the single image_url TEXT column
+  const serializedImageUrl =
+    product.imageUrls.length > 0
+      ? JSON.stringify(product.imageUrls)
+      : product.imageUrl;
+
   const { error } = await supabase.from("products").insert({
     title: product.title,
     description: product.description,
@@ -125,7 +154,7 @@ export const addProduct = async (
     condition: product.condition,
     wants_in_return: product.wantsInReturn,
     acceptable_items: product.acceptableItems,
-    image_url: product.imageUrl,
+    image_url: serializedImageUrl,
     region: product.region,
     location: product.location,
     user_id: product.userId,
@@ -170,6 +199,14 @@ export const uploadProductImage = async (
   };
 
   return Promise.race([uploadProcess(), timeoutPromise]);
+};
+
+/** Upload multiple images in parallel and return array of public URLs */
+export const uploadMultipleProductImages = async (
+  files: File[],
+  userId: string
+): Promise<string[]> => {
+  return Promise.all(files.map((file) => uploadProductImage(file, userId)));
 };
 
 // ─── Chats ────────────────────────────────────────────────────────────────────
@@ -562,6 +599,11 @@ export interface ProfileUpdate {
 }
 
 export const updateProfile = async (userId: string, updates: ProfileUpdate) => {
+  // Backend validation: enforce 50-char limit on display name
+  if (updates.displayName !== undefined && updates.displayName.length > 50) {
+    throw new Error("El nombre de usuario no puede superar los 50 caracteres.");
+  }
+
   const payload: Record<string, any> = {};
   if (updates.displayName !== undefined) payload.display_name = updates.displayName;
   if (updates.location !== undefined) payload.location = updates.location;

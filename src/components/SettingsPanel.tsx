@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/i18n";
 import { fetchProfile, updateProfile } from "@/lib/database";
 import { comunasByRegion } from "@/data/chileanLocations";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ interface SettingsPanelProps {
 
 const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelProps) => {
   const { logout, user } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
 
   // Profile editing state
   const [editMode, setEditMode] = useState(false);
@@ -31,7 +33,6 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
   const [notifPromos, setNotifPromos] = useState(false);
   const [profilePublic, setProfilePublic] = useState(true);
   const [hideLocation, setHideLocation] = useState(false);
-  const [language, setLanguage] = useState("es");
   const [loggingOut, setLoggingOut] = useState(false);
 
   const regions = Object.keys(comunasByRegion);
@@ -62,11 +63,11 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
         region: profileRegion,
         location: profileLocation,
       });
-      toast.success("¡Perfil actualizado!");
+      toast.success(t("settings.profileUpdated"));
       setEditMode(false);
     } catch (err) {
       console.error(err);
-      toast.error("Error al guardar el perfil");
+      toast.error(t("settings.profileError"));
     } finally {
       setSaving(false);
     }
@@ -78,20 +79,20 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
       await logout();
       onClose();
     } catch {
-      toast.error("Error al cerrar sesión");
+      toast.error(t("settings.logoutError"));
     } finally {
       setLoggingOut(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Configuración">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={t("settings.title")}>
       <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-md max-h-[85vh] bg-card rounded-2xl overflow-hidden shadow-2xl animate-fade-in">
         <div className="flex items-center justify-between p-5 border-b">
-          <h2 className="font-display text-xl font-bold text-foreground">Configuración</h2>
-          <button onClick={onClose} className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80" aria-label="Cerrar configuración">
+          <h2 className="font-display text-xl font-bold text-foreground">{t("settings.title")}</h2>
+          <button onClick={onClose} className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80" aria-label={t("general.close")}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -100,13 +101,13 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
           {/* Profile editing */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Mi Perfil</h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.myProfile")}</h3>
               {!editMode && (
                 <button
                   onClick={() => setEditMode(true)}
                   className="text-xs text-primary hover:underline flex items-center gap-1"
                 >
-                  <Edit className="h-3 w-3" /> Editar
+                  <Edit className="h-3 w-3" /> {t("settings.edit")}
                 </button>
               )}
             </div>
@@ -120,14 +121,14 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                 {/* Display Name */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <User className="h-3 w-3" /> Nombre
+                    <User className="h-3 w-3" /> {t("settings.name")}
                   </label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="w-full rounded-lg bg-card border px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary transition-all"
-                    placeholder="Tu nombre"
+                    placeholder={t("settings.namePlaceholder")}
                     maxLength={50}
                   />
                 </div>
@@ -135,7 +136,7 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                 {/* Region */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> Región
+                    <MapPin className="h-3 w-3" /> {t("settings.region")}
                   </label>
                   <Select
                     value={profileRegion}
@@ -145,7 +146,7 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                     }}
                   >
                     <SelectTrigger className="rounded-lg text-sm">
-                      <SelectValue placeholder="Selecciona región" />
+                      <SelectValue placeholder={t("settings.selectRegion")} />
                     </SelectTrigger>
                     <SelectContent>
                       {regions.map((r) => (
@@ -159,11 +160,11 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                 {comunas.length > 0 && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> Comuna
+                      <MapPin className="h-3 w-3" /> {t("settings.comuna")}
                     </label>
                     <Select value={profileLocation} onValueChange={setProfileLocation}>
                       <SelectTrigger className="rounded-lg text-sm">
-                        <SelectValue placeholder="Selecciona comuna" />
+                        <SelectValue placeholder={t("settings.selectComuna")} />
                       </SelectTrigger>
                       <SelectContent>
                         {comunas.map((c) => (
@@ -182,7 +183,7 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                     disabled={saving || !displayName.trim()}
                   >
                     {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                    Guardar
+                    {t("settings.save")}
                   </Button>
                   <Button
                     size="sm"
@@ -191,7 +192,7 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                     onClick={() => setEditMode(false)}
                     disabled={saving}
                   >
-                    Cancelar
+                    {t("settings.cancel")}
                   </Button>
                 </div>
               </div>
@@ -202,11 +203,11 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                     {displayName ? displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) : "?"}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{displayName || "Sin nombre"}</p>
+                    <p className="text-sm font-semibold text-foreground">{displayName || t("settings.noName")}</p>
                     <p className="text-xs text-muted-foreground">
                       {profileLocation && profileRegion
                         ? `${profileLocation}, ${profileRegion}`
-                        : profileRegion || "Sin ubicación"}
+                        : profileRegion || t("settings.noLocation")}
                     </p>
                   </div>
                 </div>
@@ -216,13 +217,13 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
 
           {/* Apariencia */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Apariencia</h3>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.appearance")}</h3>
             <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border">
               <div className="flex items-center gap-3">
                 {darkMode ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-amber-500" />}
                 <div>
-                  <p className="text-sm font-medium text-foreground">Modo oscuro</p>
-                  <p className="text-xs text-muted-foreground">Cambia entre tema claro y oscuro</p>
+                  <p className="text-sm font-medium text-foreground">{t("settings.darkMode")}</p>
+                  <p className="text-xs text-muted-foreground">{t("settings.darkModeDesc")}</p>
                 </div>
               </div>
               <Switch checked={darkMode} onCheckedChange={onToggleDarkMode} />
@@ -231,16 +232,16 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
 
           {/* Idioma */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Idioma y región</h3>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.languageAndRegion")}</h3>
             <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border">
               <div className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Idioma</p>
-                  <p className="text-xs text-muted-foreground">Idioma de la interfaz</p>
+                  <p className="text-sm font-medium text-foreground">{t("settings.language")}</p>
+                  <p className="text-xs text-muted-foreground">{t("settings.languageDesc")}</p>
                 </div>
               </div>
-              <Select value={language} onValueChange={setLanguage}>
+              <Select value={language} onValueChange={(v) => setLanguage(v as "es" | "en")}>
                 <SelectTrigger className="w-[130px] rounded-full text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -254,12 +255,12 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
 
           {/* Notificaciones */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Notificaciones</h3>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.notifications")}</h3>
             <div className="space-y-2">
               {([
-                { icon: Bell, label: "Nuevos mensajes", desc: "Cuando alguien te envía un mensaje", value: notifMessages, onChange: setNotifMessages },
-                { icon: Bell, label: "Propuestas de trueque", desc: "Cuando recibes una oferta", value: notifProposals, onChange: setNotifProposals },
-                { icon: Bell, label: "Promociones", desc: "Ofertas y novedades de TruequeYa", value: notifPromos, onChange: setNotifPromos },
+                { icon: Bell, label: t("settings.newMessages"), desc: t("settings.newMessagesDesc"), value: notifMessages, onChange: setNotifMessages },
+                { icon: Bell, label: t("settings.tradeProposals"), desc: t("settings.tradeProposalsDesc"), value: notifProposals, onChange: setNotifProposals },
+                { icon: Bell, label: t("settings.promotions"), desc: t("settings.promotionsDesc"), value: notifPromos, onChange: setNotifPromos },
               ] as const).map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border">
                   <div className="flex items-center gap-3">
@@ -277,14 +278,14 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
 
           {/* Privacidad */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Privacidad</h3>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.privacy")}</h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border">
                 <div className="flex items-center gap-3">
                   <Eye className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Perfil público</p>
-                    <p className="text-xs text-muted-foreground">Otros pueden ver tu perfil</p>
+                    <p className="text-sm font-medium text-foreground">{t("settings.publicProfile")}</p>
+                    <p className="text-xs text-muted-foreground">{t("settings.publicProfileDesc")}</p>
                   </div>
                 </div>
                 <Switch checked={profilePublic} onCheckedChange={setProfilePublic} />
@@ -293,8 +294,8 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
                 <div className="flex items-center gap-3">
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Ubicación exacta</p>
-                    <p className="text-xs text-muted-foreground">Mostrar solo zona aproximada</p>
+                    <p className="text-sm font-medium text-foreground">{t("settings.exactLocation")}</p>
+                    <p className="text-xs text-muted-foreground">{t("settings.exactLocationDesc")}</p>
                   </div>
                 </div>
                 <Switch checked={hideLocation} onCheckedChange={setHideLocation} />
@@ -304,22 +305,22 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
 
           {/* Account actions */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Cuenta</h3>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t("settings.account")}</h3>
             {user && (
-              <p className="text-xs text-muted-foreground px-1">Sesión iniciada como <strong>{user.email}</strong></p>
+              <p className="text-xs text-muted-foreground px-1">{t("settings.loggedInAs")} <strong>{user.email}</strong></p>
             )}
             <button
-              onClick={() => toast.info("Función disponible próximamente")}
+              onClick={() => toast.info(t("settings.comingSoon"))}
               className="w-full flex items-center justify-between p-3 rounded-xl border text-sm font-medium transition-colors text-foreground hover:bg-secondary/50 bg-secondary/30"
             >
-              <span className="flex items-center gap-2"><Key className="h-4 w-4" /> Cambiar contraseña</span>
+              <span className="flex items-center gap-2"><Key className="h-4 w-4" /> {t("settings.changePassword")}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
             <button
-              onClick={() => toast.info("Verificación disponible próximamente")}
+              onClick={() => toast.info(t("settings.verifyComingSoon"))}
               className="w-full flex items-center justify-between p-3 rounded-xl border text-sm font-medium transition-colors text-foreground hover:bg-secondary/50 bg-secondary/30"
             >
-              <span className="flex items-center gap-2"><BadgeCheck className="h-4 w-4" /> Verificar identidad</span>
+              <span className="flex items-center gap-2"><BadgeCheck className="h-4 w-4" /> {t("settings.verifyIdentity")}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
             <button
@@ -327,7 +328,7 @@ const SettingsPanel = ({ onClose, darkMode, onToggleDarkMode }: SettingsPanelPro
               disabled={loggingOut}
               className="w-full flex items-center justify-between p-3 rounded-xl border text-sm font-medium transition-colors text-destructive hover:bg-destructive/10 bg-destructive/5 border-destructive/20 disabled:opacity-60"
             >
-              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}</span>
+              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> {loggingOut ? t("settings.loggingOut") : t("settings.logout")}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </section>

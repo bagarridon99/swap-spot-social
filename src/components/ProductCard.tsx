@@ -51,9 +51,9 @@ const ProductCard = ({ product, onClick, saved, onToggleSave }: ProductCardProps
               e.stopPropagation();
               onToggleSave?.();
             }}
-            className="h-7 w-7 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors"
+            className="h-9 w-9 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-all transform hover:scale-110 active:scale-95 hover:shadow-md"
           >
-            <Heart className={`h-3.5 w-3.5 ${saved ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+            <Heart className={`h-5 w-5 ${saved ? "fill-accent text-accent" : "text-muted-foreground"}`} />
           </button>
         </div>
       </div>

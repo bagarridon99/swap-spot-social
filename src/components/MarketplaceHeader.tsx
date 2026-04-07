@@ -2,6 +2,7 @@ import { Search, Bell, MessageCircle, Plus, ArrowLeftRight, Heart, Crown, Settin
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/i18n";
 import { toast } from "sonner";
 
 interface MarketplaceHeaderProps {
@@ -19,13 +20,14 @@ interface MarketplaceHeaderProps {
 
 const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPricing, onSettings, searchQuery, onSearchChange, unreadChats = 0, unreadNotifications = 0 }: MarketplaceHeaderProps) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   const displayName = user?.user_metadata?.display_name || user?.email || "Usuario";
   const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
     await logout();
-    toast.success("Sesión cerrada");
+    toast.success(t("header.sessionClosed"));
   };
 
   return (
@@ -42,7 +44,7 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar artículos para intercambiar..."
+              placeholder={t("header.search")}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full rounded-full bg-secondary pl-10 pr-4 py-2 text-sm outline-none ring-1 ring-transparent focus:ring-primary transition-all"
@@ -58,11 +60,11 @@ const MarketplaceHeader = ({ onPublish, onNotifications, onChat, onSaved, onPric
             onClick={onPricing}
           >
             <Crown className="h-4 w-4" />
-            Premium
+            {t("header.premium")}
           </Button>
           <Button size="sm" className="hidden sm:flex gap-1.5 rounded-full" onClick={onPublish}>
             <Plus className="h-4 w-4" />
-            Publicar
+            {t("header.publish")}
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full" onClick={onSaved}>
             <Heart className="h-5 w-5" />

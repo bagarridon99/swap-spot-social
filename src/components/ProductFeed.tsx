@@ -58,7 +58,7 @@ const ProductFeed = ({
                 onToggleSave(product.id!);
               }}
               aria-label={savedIds.has(product.id!) ? "Quitar de guardados" : "Guardar artículo"}
-              className={`absolute top-3 right-3 p-1.5 rounded-full transition-all ${
+              className={`absolute top-3 right-3 p-2.5 rounded-full transition-all transform hover:scale-110 active:scale-95 hover:shadow-md ${
                 savedIds.has(product.id!)
                   ? "bg-primary text-primary-foreground"
                   : "bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-primary"
@@ -66,7 +66,7 @@ const ProductFeed = ({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
+                className="h-5 w-5"
                 fill={savedIds.has(product.id!) ? "currentColor" : "none"}
                 viewBox="0 0 24 24"
                 stroke="currentColor"
